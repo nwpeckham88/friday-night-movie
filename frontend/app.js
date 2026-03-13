@@ -168,3 +168,50 @@ async function mockLoadData() {
         console.error("Failed to fetch downloads:", e);
     }
 }
+
+async function showDefaultMovie(container) {
+    try {
+        const res = await fetch('/api/schedule');
+        const data = res.ok ? await res.json() : { nextRun: 'Friday at 6:00 PM' };
+        
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem;" class="fade-in">
+                <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Next Selection: ${data.nextRun}</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
+                <button class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
+                    <span>🎲</span> I'm feeling lucky
+                </button>
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem;" class="fade-in">
+                <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Next Selection: Friday at 6:00 PM</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
+                <button class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
+                    <span>🎲</span> I'm feeling lucky
+                </button>
+            </div>
+        `;
+    }
+}
+
+async function triggerJob() {
+    try {
+        const container = document.getElementById('current-movie');
+        container.innerHTML = '<div class="loading-pulse">Selecting a movie now...</div>';
+        
+        const res = await fetch('/api/trigger', { method: 'POST' });
+        if (res.ok) {
+            // Wait a moment for the backend job to complete
+            setTimeout(mockLoadData, 3000);
+        } else {
+            alert('Failed to trigger the movie engine.');
+            showDefaultMovie(container);
+        }
+    } catch (e) {
+        console.error("Failed to trigger job:", e);
+        alert('Failed to trigger the movie engine.');
+        showDefaultMovie(document.getElementById('current-movie'));
+    }
+}

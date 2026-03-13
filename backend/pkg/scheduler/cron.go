@@ -51,3 +51,12 @@ func (s *Scheduler) TriggerNow(job func()) {
 	job()
 	log.Println("Finished manual Friday Night Movie job.")
 }
+
+// NextRun returns the time of the next scheduled run
+func (s *Scheduler) NextRun() string {
+	entries := s.Cron.Entries()
+	if len(entries) > 0 {
+		return entries[0].Next.Format("Monday at 3:04 PM")
+	}
+	return "Not scheduled"
+}

@@ -30,19 +30,26 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// API Routes
+	// API Routes (moved after scheduler setup)
+
+	// Setup and start scheduler
+	sched := scheduler.NewScheduler()
+	
+	// API Routes - moved after scheduler init so it can use 'sched'
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/status", getStatus)
 		r.Get("/config", getConfig)
 		r.Post("/config", saveConfig)
 		r.Get("/state", getState)
 		r.Post("/trigger", triggerRoutine)
+		r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"nextRun": sched.NextRun()})
+		})
 		r.Get("/history", getHistory)
 		r.Get("/downloads", getDownloads)
 	})
 
-	// Setup and start scheduler
-	sched := scheduler.NewScheduler()
 	sched.ScheduleFridayNightJob(func() {
 		triggerEngineLogic()
 	})

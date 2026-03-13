@@ -22,7 +22,13 @@
                 <h2>Tonight's Selection</h2>
                 <div class="movie-showcase" id="current-movie">
                     <!-- Dynamic Content -->
-                    <div class="loading-pulse">Searching for the perfect movie...</div>
+                    <div style="text-align: center; padding: 2rem;">
+                        <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Loading schedule...</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
+                        <button class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
+                            <span>🎲</span> I'm feeling lucky
+                        </button>
+                    </div>
                 </div>
             </section>
 

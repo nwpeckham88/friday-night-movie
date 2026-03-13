@@ -31,8 +31,8 @@ func NewGeminiClient(apiKey string) (*GeminiClient, error) {
 func (g *GeminiClient) DiscoverMovie(userHistory []string) (string, error) {
 	ctx := context.Background()
 
-	// Use gemini-2.5-pro for thinking capabilities and grounded search
-	model := "gemini-3.1-flash-lite-preview"
+	// Use gemini-2.5-flash for capabilities and grounded search
+	model := "gemini-2.5-flash"
 
 	// Current Context
 	now := time.Now()

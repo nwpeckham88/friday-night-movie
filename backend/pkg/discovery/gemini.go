@@ -29,9 +29,9 @@ func NewGeminiClient(apiKey string) (*GeminiClient, error) {
 }
 
 type GeminiResponse struct {
-	Title  string `json:"title"`
-	Year   int    `json:"year"`
-	TMDBID int    `json:"tmdb_id"`
+	Title       string `json:"title"`
+	Year        int    `json:"year"`
+	SearchQuery string `json:"search_query"`
 }
 
 // DiscoverMovie uses Gemini to think about the user's history and search for a great recommendation
@@ -62,8 +62,8 @@ Instructions:
 2. Consider the current date/season.
 3. Use Google Search to find highly-rated trending movies or hidden gems that match this profile.
 4. DO NOT recommend a movie they have already watched.
-5. You MUST return ONLY a JSON object containing the movie's title, release year, and TMDB ID. Do not include markdown formatting or any other text.
-Format: {"title": "Movie Title", "year": 2024, "tmdb_id": 123456}
+6. You MUST return ONLY a JSON object containing the movie's title, release year, and a URL-encoded TMDB search query (e.g., the title and year). Do not include markdown formatting or any other text.
+Format: {"title": "Movie Title", "year": 2024, "search_query": "Movie Title 2024"}
 `, dateStr, historyContext)
 
 	log.Printf("Prompting Gemini: \n%s\n", prompt)
@@ -98,12 +98,13 @@ Format: {"title": "Movie Title", "year": 2024, "tmdb_id": 123456}
 		return nil, fmt.Errorf("gemini return unexpected response type")
 	}
 
-	// Clean up the response just in case the LLM returned markdown
-	cleanResponse := strings.TrimSpace(textResponse)
-	cleanResponse = strings.TrimPrefix(cleanResponse, "```json")
-	cleanResponse = strings.TrimPrefix(cleanResponse, "```")
-	cleanResponse = strings.TrimSuffix(cleanResponse, "```")
-	cleanResponse = strings.TrimSpace(cleanResponse)
+	// Clean up the response just in case the LLM returned extra text
+	startIdx := strings.Index(textResponse, "{")
+	endIdx := strings.LastIndex(textResponse, "}")
+	if startIdx == -1 || endIdx == -1 {
+		return nil, fmt.Errorf("could not find JSON object in gemini response: %s", textResponse)
+	}
+	cleanResponse := textResponse[startIdx : endIdx+1]
 
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(cleanResponse), &result); err != nil {
@@ -112,8 +113,8 @@ Format: {"title": "Movie Title", "year": 2024, "tmdb_id": 123456}
 
 	log.Printf("Gemini Suggested: %+v", result)
 	return &GeminiResponse{
-		Title:  result["title"].(string),
-		Year:   int(result["year"].(float64)),
-		TMDBID: int(result["tmdb_id"].(float64)),
+		Title:       result["title"].(string),
+		Year:        int(result["year"].(float64)),
+		SearchQuery: result["search_query"].(string),
 	}, nil
 }

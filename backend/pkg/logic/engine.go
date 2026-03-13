@@ -50,11 +50,11 @@ func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMD
 
 	fmt.Printf("Gemini Suggested: %s (%d)\n", suggestion.Title, suggestion.Year)
 
-	// 4. Fetch the movie details from TMDB using the provided ID
-	fmt.Printf("Fetching movie details for TMDB ID: %d...\n", suggestion.TMDBID)
-	selectedMovie, err := tClient.GetMovie(suggestion.TMDBID)
+	// 4. Resolve the title to a TMDB ID
+	fmt.Printf("Resolving title to TMDB ID using query: %s...\n", suggestion.SearchQuery)
+	selectedMovie, err := tClient.SearchMovie(suggestion.SearchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch movie details from TMDB for ID %d: %w", suggestion.TMDBID, err)
+		return nil, fmt.Errorf("failed to sync gemini result with tmdb (%s): %w", suggestion.SearchQuery, err)
 	}
 
 	// 5. Check if it's already in our library (Jellyfin/Radarr) by the resolved name

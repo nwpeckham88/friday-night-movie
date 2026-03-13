@@ -91,3 +91,30 @@ func (t *TMDBClient) SearchMovie(query string) (*TMDBMovie, error) {
 
 	return &result.Results[0], nil
 }
+
+// GetMovie fetches a single movie by its TMDB ID
+func (t *TMDBClient) GetMovie(id int) (*TMDBMovie, error) {
+	url := fmt.Sprintf("%s/3/movie/%d?api_key=%s", t.BaseURL, id, t.APIKey)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := t.HTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("tmdb api error: %s", resp.Status)
+	}
+
+	var result TMDBMovie
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	
+	"github.com/joho/godotenv"
 )
 
 // AppConfig represents the user settings
@@ -45,7 +47,30 @@ func init() {
 func GetConfig() AppConfig {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	return memData.Config
+	
+	cfg := memData.Config
+	
+	// Fallback to Env variables if JSON value is empty
+	if cfg.JellyfinURL == "" {
+		cfg.JellyfinURL = os.Getenv("JELLYFIN_URL")
+	}
+	if cfg.JellyfinKey == "" {
+		cfg.JellyfinKey = os.Getenv("JELLYFIN_KEY")
+	}
+	if cfg.RadarrURL == "" {
+		cfg.RadarrURL = os.Getenv("RADARR_URL")
+	}
+	if cfg.RadarrKey == "" {
+		cfg.RadarrKey = os.Getenv("RADARR_KEY")
+	}
+	if cfg.TMDBKey == "" {
+		cfg.TMDBKey = os.Getenv("TMDB_KEY")
+	}
+	if cfg.GeminiKey == "" {
+		cfg.GeminiKey = os.Getenv("GEMINI_KEY")
+	}
+
+	return cfg
 }
 
 func GetState() AppState {
@@ -69,7 +94,11 @@ func SaveState(state AppState) error {
 }
 
 // Load reads the JSON file into memory if it exists
+// It also loads the .env file if present
 func Load() error {
+	// Attempt to load .env file
+	_ = godotenv.Load()
+
 	mutex.Lock()
 	defer mutex.Unlock()
 	

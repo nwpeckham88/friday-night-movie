@@ -7,6 +7,8 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/app/data
+    env_file:
+      - .env
     restart: unless-stopped
     environment:
       - TZ=UTC # Change to your local timezone if needed

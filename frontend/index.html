@@ -46,6 +46,9 @@
         <main id="view-settings" class="view">
             <section class="glass-panel fade-in">
                 <h2>Configuration</h2>
+                <div class="config-warning" style="margin-bottom: 2rem; color: var(--text-secondary); font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--accent-color);">
+                    <strong>Security Note:</strong> Values entered here are stored unencrypted in <code>data/data.json</code>. For better security, you can set these values as environment variables (e.g., via a <code>.env</code> file). Fields loaded from the environment are greyed out and cannot be modified here.
+                </div>
                 <form id="settings-form">
                     <div class="form-group">
                         <label for="jellyfin-url">Jellyfin URL</label>

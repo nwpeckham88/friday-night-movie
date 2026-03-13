@@ -76,10 +76,13 @@ async function loadConfig() {
                 const el = document.getElementById(f.id);
                 if (f.env) {
                     el.value = f.val;
-                    el.placeholder = 'Loaded from .env';
+                    el.placeholder = 'Loaded from environment';
+                    el.disabled = true;
+                    el.style.opacity = '0.5';
+                    el.style.cursor = 'not-allowed';
                     const label = document.querySelector(`label[for="${f.id}"]`);
-                    if (label && !label.innerHTML.includes('Set via .env')) {
-                        label.innerHTML += ' <span style="color: var(--success-color); font-size: 0.75rem; margin-left: 0.5rem; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid var(--success-color);">Set via .env</span>';
+                    if (label && !label.innerHTML.includes('Loaded from environment')) {
+                        label.innerHTML += ' <span style="color: var(--success-color); font-size: 0.75rem; margin-left: 0.5rem; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid var(--success-color);">Loaded from environment</span>';
                     }
                 } else if (f.val) {
                     el.value = f.val;

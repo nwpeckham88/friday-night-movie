@@ -106,9 +106,14 @@ func triggerEngineLogic() {
 	cfg := config.GetConfig()
 	jClient := media.NewJellyfinClient(cfg.JellyfinURL, cfg.JellyfinKey)
 	tClient := discovery.NewTMDBClient(cfg.TMDBKey)
+	gClient, err := discovery.NewGeminiClient(cfg.GeminiKey)
+	if err != nil {
+		fmt.Printf("Failed to initialize Gemini: %v\n", err)
+		return
+	}
 	rClient := downloader.NewClient(cfg.RadarrURL, cfg.RadarrKey)
 	
-	movie, err := logic.RunFridayNightRoutine(jClient, tClient, rClient)
+	movie, err := logic.RunFridayNightRoutine(jClient, tClient, gClient, rClient)
 	if err != nil {
 		fmt.Printf("Error running routine: %v\n", err)
 	} else if movie != nil {

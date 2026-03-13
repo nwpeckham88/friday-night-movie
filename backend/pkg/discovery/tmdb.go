@@ -61,3 +61,33 @@ func (t *TMDBClient) DiscoverMovies(params string) ([]TMDBMovie, error) {
 
 	return result.Results, nil
 }
+// SearchMovie resolves a literal string title into a TMDBMovie
+func (t *TMDBClient) SearchMovie(query string) (*TMDBMovie, error) {
+	url := fmt.Sprintf("%s/3/search/movie?api_key=%s&query=%s&include_adult=false", t.BaseURL, t.APIKey, query)
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := t.HTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("tmdb api error: %s", resp.Status)
+	}
+
+	var result TMDBResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	if len(result.Results) == 0 {
+		return nil, fmt.Errorf("no movie found on TMDB for query: %s", query)
+	}
+
+	return &result.Results[0], nil
+}

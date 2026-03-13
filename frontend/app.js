@@ -29,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
             jellyfinKey: document.getElementById('jellyfin-key').value,
             radarrUrl: document.getElementById('radarr-url').value,
             radarrKey: document.getElementById('radarr-key').value,
-            tmdbKey: document.getElementById('tmdb-key').value
+            tmdbKey: document.getElementById('tmdb-key').value,
+            geminiKey: document.getElementById('gemini-key').value
         };
 
         // In a real app, send to backend API

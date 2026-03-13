@@ -13,6 +13,7 @@ type AppConfig struct {
 	RadarrURL    string `json:"radarrUrl"`
 	RadarrKey    string `json:"radarrKey"`
 	TMDBKey      string `json:"tmdbKey"`
+	GeminiKey    string `json:"geminiKey"`
 }
 
 // AppState represents the active state of the app

@@ -2,7 +2,6 @@ package logic
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/user/friday-night-movie/pkg/discovery"
@@ -11,14 +10,14 @@ import (
 )
 
 // RunFridayNightRoutine orchestrates finding a new movie and sending it to Radarr
-func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMDBClient, rClient *downloader.Client) (*discovery.TMDBMovie, error) {
+func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMDBClient, gClient *discovery.GeminiClient, rClient *downloader.Client) (*discovery.TMDBMovie, error) {
 	fmt.Println("Running Friday Night Routine...")
 
 	// 1. Get existing movies from Jellyfin
 	fmt.Println("Fetching existing Jellyfin library...")
 	jellyfinMovies, err := jClient.GetMovies("")
 	if err != nil {
-		return &selectedMovie, nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
+		return nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
 	}
 	existingTitles := make(map[string]bool)
 	for _, m := range jellyfinMovies {
@@ -35,34 +34,33 @@ func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMD
 		existingTitles[m.Title] = true
 	}
 
-	// 3. Discover new movies via TMDB
-	// Get popular movies with a minimum vote count
-	fmt.Println("Discovering movies via TMDB...")
-	tmdbMovies, err := tClient.DiscoverMovies("sort_by=popularity.desc&vote_count.gte=500&vote_average.gte=6.5")
+	// 3. Discover new movie via Gemini LLM Think & Search
+	fmt.Println("Discovering movies via Gemini Intelligence...")
+	
+	// Prepare history context
+	var historyStrings []string
+	for title := range existingTitles {
+		historyStrings = append(historyStrings, title)
+	}
+
+	suggestedTitle, err := gClient.DiscoverMovie(historyStrings)
 	if err != nil {
-		return &selectedMovie, nil, fmt.Errorf("failed to discover from tmdb: %w", err)
+		return nil, fmt.Errorf("gemini discovery failed: %w", err)
 	}
 
-	// 4. Filter out movies we already have
-	var candidates []discovery.TMDBMovie
-	for _, m := range tmdbMovies {
-		if !existingTitles[m.Title] {
-			candidates = append(candidates, m)
-		}
+	fmt.Printf("Gemini Suggested: %s\n", suggestedTitle)
+
+	// 4. Resolve the title to a TMDB ID
+	fmt.Println("Resolving title to TMDB ID...")
+	selectedMovie, err := tClient.SearchMovie(suggestedTitle)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sync gemini result with tmdb (%s): %w", suggestedTitle, err)
 	}
 
-	if len(candidates) == 0 {
-		return &selectedMovie, nil, fmt.Errorf("no new movies found to download after filtering")
+	// 5. Check if it's already in our library (Jellyfin/Radarr) by the resolved name
+	if existingTitles[selectedMovie.Title] {
+		return nil, fmt.Errorf("gemini suggested a movie we already have: %s", selectedMovie.Title)
 	}
-
-	// 5. Select one randomly (or pick the top one)
-	// We'll pick a random one from the top 10 candidates to introduce variety
-	rand.Seed(time.Now().UnixNano())
-	maxIndex := len(candidates)
-	if maxIndex > 10 {
-		maxIndex = 10
-	}
-	selectedMovie := candidates[rand.Intn(maxIndex)]
 
 	fmt.Printf("Selected Movie: %s (TMDB ID: %d, Rating: %.1f)\n", selectedMovie.Title, selectedMovie.ID, selectedMovie.VoteAverage)
 
@@ -86,9 +84,9 @@ func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMD
 
 	fmt.Println("Adding to Radarr...")
 	if err := rClient.AddMovie(addPayload); err != nil {
-		return &selectedMovie, nil, fmt.Errorf("failed to add movie to radarr: %w", err)
+		return nil, fmt.Errorf("failed to add movie to radarr: %w", err)
 	}
 
 	fmt.Println("Successfully added movie to Radarr queue!")
-	return &selectedMovie, nil
+	return selectedMovie, nil
 }

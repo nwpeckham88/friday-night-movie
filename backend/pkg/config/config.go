@@ -73,6 +73,57 @@ func GetConfig() AppConfig {
 	return cfg
 }
 
+// GetFrontendConfig returns the config state and indicates if a value was sourced from the .env file
+func GetFrontendConfig() map[string]interface{} {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	
+	cfg := memData.Config
+	
+	res := map[string]interface{}{
+		"jellyfinUrl": cfg.JellyfinURL,
+		"jellyfinKey": cfg.JellyfinKey,
+		"radarrUrl":   cfg.RadarrURL,
+		"radarrKey":   cfg.RadarrKey,
+		"tmdbKey":     cfg.TMDBKey,
+		"geminiKey":   cfg.GeminiKey,
+		
+		"jellyfinUrlFromEnv": false,
+		"jellyfinKeyFromEnv": false,
+		"radarrUrlFromEnv":   false,
+		"radarrKeyFromEnv":   false,
+		"tmdbKeyFromEnv":     false,
+		"geminiKeyFromEnv":   false,
+	}
+
+	if cfg.JellyfinURL == "" && os.Getenv("JELLYFIN_URL") != "" {
+		res["jellyfinUrl"] = os.Getenv("JELLYFIN_URL")
+		res["jellyfinUrlFromEnv"] = true
+	}
+	if cfg.JellyfinKey == "" && os.Getenv("JELLYFIN_KEY") != "" {
+		res["jellyfinKey"] = os.Getenv("JELLYFIN_KEY")
+		res["jellyfinKeyFromEnv"] = true
+	}
+	if cfg.RadarrURL == "" && os.Getenv("RADARR_URL") != "" {
+		res["radarrUrl"] = os.Getenv("RADARR_URL")
+		res["radarrUrlFromEnv"] = true
+	}
+	if cfg.RadarrKey == "" && os.Getenv("RADARR_KEY") != "" {
+		res["radarrKey"] = os.Getenv("RADARR_KEY")
+		res["radarrKeyFromEnv"] = true
+	}
+	if cfg.TMDBKey == "" && os.Getenv("TMDB_KEY") != "" {
+		res["tmdbKey"] = os.Getenv("TMDB_KEY")
+		res["tmdbKeyFromEnv"] = true
+	}
+	if cfg.GeminiKey == "" && os.Getenv("GEMINI_KEY") != "" {
+		res["geminiKey"] = os.Getenv("GEMINI_KEY")
+		res["geminiKeyFromEnv"] = true
+	}
+
+	return res
+}
+
 func GetState() AppState {
 	mutex.RLock()
 	defer mutex.RUnlock()

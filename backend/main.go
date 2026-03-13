@@ -71,7 +71,7 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 
 func getConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(config.GetConfig())
+	json.NewEncoder(w).Encode(config.GetFrontendConfig())
 }
 
 func saveConfig(w http.ResponseWriter, r *http.Request) {

@@ -53,11 +53,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Load initial data (mocked for now, will connect to Go backend)
-    setTimeout(() => {
-        mockLoadData();
-    }, 1500);
+    // Load initial data
+    loadConfig();
+    mockLoadData();
 });
+
+async function loadConfig() {
+    try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const cfg = await res.json();
+            const fields = [
+                { id: 'jellyfin-url', val: cfg.jellyfinUrl, env: cfg.jellyfinUrlFromEnv },
+                { id: 'jellyfin-key', val: cfg.jellyfinKey, env: cfg.jellyfinKeyFromEnv },
+                { id: 'radarr-url', val: cfg.radarrUrl, env: cfg.radarrUrlFromEnv },
+                { id: 'radarr-key', val: cfg.radarrKey, env: cfg.radarrKeyFromEnv },
+                { id: 'tmdb-key', val: cfg.tmdbKey, env: cfg.tmdbKeyFromEnv },
+                { id: 'gemini-key', val: cfg.geminiKey, env: cfg.geminiKeyFromEnv },
+            ];
+            
+            fields.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (f.env) {
+                    el.value = f.val;
+                    el.placeholder = 'Loaded from .env';
+                    const label = document.querySelector(`label[for="${f.id}"]`);
+                    if (label && !label.innerHTML.includes('Set via .env')) {
+                        label.innerHTML += ' <span style="color: var(--success-color); font-size: 0.75rem; margin-left: 0.5rem; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid var(--success-color);">Set via .env</span>';
+                    }
+                } else if (f.val) {
+                    el.value = f.val;
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load config:", e);
+    }
+}
 
 async function mockLoadData() {
     const currentMovieArea = document.getElementById('current-movie');

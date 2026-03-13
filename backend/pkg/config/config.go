@@ -64,7 +64,11 @@ func GetConfig() AppConfig {
 	if cfg.TMDBKey == "" {
 		cfg.TMDBKey = os.Getenv("TMDB_KEY")
 	}
-	if cfg.GeminiKey == "" {
+	
+	// For testing purposes, prioritize testing API key
+	if testKey := os.Getenv("GEMINI_TEST_KEY"); testKey != "" {
+		cfg.GeminiKey = testKey
+	} else if cfg.GeminiKey == "" {
 		cfg.GeminiKey = os.Getenv("GEMINI_KEY")
 	}
 
@@ -114,7 +118,11 @@ func GetFrontendConfig() map[string]interface{} {
 		res["tmdbKey"] = os.Getenv("TMDB_KEY")
 		res["tmdbKeyFromEnv"] = true
 	}
-	if cfg.GeminiKey == "" && os.Getenv("GEMINI_KEY") != "" {
+	
+	if os.Getenv("GEMINI_TEST_KEY") != "" {
+		res["geminiKey"] = os.Getenv("GEMINI_TEST_KEY")
+		res["geminiKeyFromEnv"] = true
+	} else if cfg.GeminiKey == "" && os.Getenv("GEMINI_KEY") != "" {
 		res["geminiKey"] = os.Getenv("GEMINI_KEY")
 		res["geminiKeyFromEnv"] = true
 	}

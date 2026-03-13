@@ -32,12 +32,12 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string) (string, error) {
 	ctx := context.Background()
 
 	// Use gemini-2.5-pro for thinking capabilities and grounded search
-	model := "gemini-2.5-pro"
+	model := "gemini-3.1-flash-lite-preview"
 
 	// Current Context
 	now := time.Now()
 	dateStr := now.Format("January 02, 2006")
-	
+
 	historyContext := "None"
 	if len(userHistory) > 0 {
 		historyContext = strings.Join(userHistory, ", ")
@@ -70,7 +70,7 @@ Instructions:
 		},
 	}
 
-	// For gemini-2.5-pro, Thinking is enabled by default or we can explicitly request it if needed. 
+	// For gemini-2.5-pro, Thinking is enabled by default or we can explicitly request it if needed.
 	// The Thinking feature allows the model to reason before answering.
 
 	response, err := g.Client.Models.GenerateContent(ctx, model, genai.Text(prompt), config)

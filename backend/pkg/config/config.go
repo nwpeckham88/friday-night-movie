@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
-	
-	"github.com/joho/godotenv"
 )
 
 // AppConfig represents the user settings
@@ -145,11 +143,7 @@ func SaveState(state AppState) error {
 }
 
 // Load reads the JSON file into memory if it exists
-// It also loads the .env file if present
 func Load() error {
-	// Attempt to load .env file
-	_ = godotenv.Load()
-
 	mutex.Lock()
 	defer mutex.Unlock()
 	

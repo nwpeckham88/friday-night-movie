@@ -55,14 +55,14 @@ Your task is to recommend ONE perfect movie for the user to watch tonight.
 
 Context:
 - Today's Date: %s
-- The user's recently watched/archived movies: %s
+- The user's recently watched/archived movies (including genres to help understand their taste): %s
 
 Instructions:
-1. Think deeply about the user's taste based on their history.
+1. Think deeply about the user's taste based on their history and the genres they enjoy.
 2. Consider the current date/season.
 3. Use Google Search to find highly-rated trending movies or hidden gems that match this profile.
 4. DO NOT recommend a movie they have already watched.
-6. You MUST return ONLY a JSON object containing the movie's title, release year, and a URL-encoded TMDB search query (e.g., the title and year). Do not include markdown formatting or any other text.
+6. You MUST return ONLY a JSON object containing the movie's title, release year, and a TMDB search query (e.g., the title and year). Do not include markdown formatting or any other text.
 Format: {"title": "Movie Title", "year": 2024, "search_query": "Movie Title 2024"}
 `, dateStr, historyContext)
 

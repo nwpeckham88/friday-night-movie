@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/user/friday-night-movie/pkg/discovery"
@@ -35,13 +36,27 @@ func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMD
 	}
 
 	// 3. Discover new movie via Gemini LLM Think & Search
-	fmt.Println("Discovering movies via Gemini Intelligence...")
-	
-	// Prepare history context
 	var historyStrings []string
-	for title := range existingTitles {
-		historyStrings = append(historyStrings, title)
+	for _, m := range jellyfinMovies {
+		genres := strings.Join(m.Genres, "/")
+		historyStrings = append(historyStrings, fmt.Sprintf("%s (Genres: %s)", m.Name, genres))
 	}
+
+	// Also add Radarr movies that might not be in Jellyfin yet, just by title
+	for title := range existingTitles {
+		found := false
+		for _, m := range jellyfinMovies {
+			if m.Name == title {
+				found = true
+				break
+			}
+		}
+		if !found {
+			historyStrings = append(historyStrings, title)
+		}
+	}
+
+	fmt.Printf("Sending %d history items to Gemini (with genres where available)...\n", len(historyStrings))
 
 	suggestion, err := gClient.DiscoverMovie(historyStrings)
 	if err != nil {

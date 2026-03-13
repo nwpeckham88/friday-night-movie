@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -63,9 +65,36 @@ func (t *TMDBClient) DiscoverMovies(params string) ([]TMDBMovie, error) {
 }
 // SearchMovie resolves a literal string title into a TMDBMovie
 func (t *TMDBClient) SearchMovie(query string) (*TMDBMovie, error) {
-	url := fmt.Sprintf("%s/3/search/movie?api_key=%s&query=%s&include_adult=false", t.BaseURL, t.APIKey, query)
+	movie, err := t.executeSearch(query)
+	if err == nil && movie != nil {
+		return movie, nil
+	}
+
+	// Fallback: If query contains a year at the end, try stripping it
+	// LLMs often provide "Title (Year)" or "Title Year"
+	parts := strings.Fields(query)
+	if len(parts) > 1 {
+		lastPart := parts[len(parts)-1]
+		// Check if lastPart is a year (4 digits)
+		if len(lastPart) == 4 || (len(lastPart) == 6 && strings.HasPrefix(lastPart, "(") && strings.HasSuffix(lastPart, ")")) {
+			fallbackQuery := strings.Join(parts[:len(parts)-1], " ")
+			fmt.Printf("TMDB: Search for '%s' failed, trying fallback: '%s'\n", query, fallbackQuery)
+			return t.executeSearch(fallbackQuery)
+		}
+	}
+
+	return nil, fmt.Errorf("no movie found on TMDB for query: %s", query)
+}
+
+func (t *TMDBClient) executeSearch(query string) (*TMDBMovie, error) {
+	params := url.Values{}
+	params.Add("api_key", t.APIKey)
+	params.Add("query", query)
+	params.Add("include_adult", "false")
+
+	searchURL := fmt.Sprintf("%s/3/search/movie?%s", t.BaseURL, params.Encode())
 	
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +115,7 @@ func (t *TMDBClient) SearchMovie(query string) (*TMDBMovie, error) {
 	}
 
 	if len(result.Results) == 0 {
-		return nil, fmt.Errorf("no movie found on TMDB for query: %s", query)
+		return nil, fmt.Errorf("no results")
 	}
 
 	return &result.Results[0], nil

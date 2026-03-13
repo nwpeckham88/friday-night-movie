@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  friday-night-movie:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - TZ=UTC # Change to your local timezone if needed

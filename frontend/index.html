@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friday Night Movie</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="glass-header">
+            <h1>🎬 Friday Night Movie</h1>
+            <nav>
+                <button id="nav-dashboard" class="active">Dashboard</button>
+                <button id="nav-settings">Settings</button>
+            </nav>
+        </header>
+
+        <main id="view-dashboard" class="view active-view">
+            <section class="hero-card glass-panel fade-in">
+                <h2>Tonight's Selection</h2>
+                <div class="movie-showcase" id="current-movie">
+                    <!-- Dynamic Content -->
+                    <div class="loading-pulse">Searching for the perfect movie...</div>
+                </div>
+            </section>
+
+            <div class="dashboard-grid">
+                <section class="glass-panel slide-up" style="animation-delay: 0.1s;">
+                    <h3>Download Status</h3>
+                    <div id="download-status">
+                        <div class="status-item">No active downloads</div>
+                    </div>
+                </section>
+
+                <section class="glass-panel slide-up" style="animation-delay: 0.2s;">
+                    <h3>Recent History (Jellyfin)</h3>
+                    <ul id="history-list" class="history-list">
+                        <li>Loading history...</li>
+                    </ul>
+                </section>
+            </div>
+        </main>
+
+        <main id="view-settings" class="view">
+            <section class="glass-panel fade-in">
+                <h2>Configuration</h2>
+                <form id="settings-form">
+                    <div class="form-group">
+                        <label for="jellyfin-url">Jellyfin URL</label>
+                        <input type="text" id="jellyfin-url" placeholder="http://localhost:8096">
+                    </div>
+                    <div class="form-group">
+                        <label for="jellyfin-key">Jellyfin API Key</label>
+                        <input type="password" id="jellyfin-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="radarr-url">Radarr URL</label>
+                        <input type="text" id="radarr-url" placeholder="http://localhost:7878">
+                    </div>
+                    <div class="form-group">
+                        <label for="radarr-key">Radarr API Key</label>
+                        <input type="password" id="radarr-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="tmdb-key">TMDB API Key</label>
+                        <input type="password" id="tmdb-key">
+                    </div>
+                    <button type="submit" class="btn-primary">Save Settings</button>
+                </form>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

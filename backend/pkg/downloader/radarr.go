@@ -122,3 +122,33 @@ func (c *Client) AddMovie(payload interface{}) error {
 
 	return nil
 }
+// QualityProfile represents a Radarr quality profile
+type QualityProfile struct {
+	Name string `json:"name"`
+	Id   int    `json:"id"`
+}
+
+func (c *Client) GetQualityProfiles() ([]QualityProfile, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/qualityprofile", c.BaseURL), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Api-Key", c.APIKey)
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("radarr quality profile api error: %s", resp.Status)
+	}
+
+	var profiles []QualityProfile
+	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+		return nil, err
+	}
+
+	return profiles, nil
+}

@@ -49,6 +49,7 @@ func main() {
 			json.NewEncoder(w).Encode(map[string]string{"nextRun": sched.NextRun()})
 		})
 		r.Get("/history", getHistory)
+		r.Get("/radarr/profiles", getRadarrProfiles)
 		r.Get("/downloads", getDownloads)
 		r.Post("/test-llm", testLLM)
 		r.Post("/reject", rejectMovie)
@@ -314,6 +315,18 @@ func triggerAddLogic(tmdbId int) {
 	}
 }
 
+
+func getRadarrProfiles(w http.ResponseWriter, r *http.Request) {
+	cfg := config.GetConfig()
+	rClient := downloader.NewClient(cfg.RadarrURL, cfg.RadarrKey)
+	profiles, err := rClient.GetQualityProfiles()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(profiles)
+}
 
 func getHistory(w http.ResponseWriter, r *http.Request) {
 	cfg := config.GetConfig()

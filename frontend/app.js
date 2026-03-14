@@ -119,7 +119,7 @@ async function loadConfig() {
                 { id: 'llm-provider', val: cfg.llmProvider, env: cfg.llmProviderFromEnv },
                 { id: 'preferred-language', val: cfg.preferredLanguage, env: false },
                 { id: 'strict-language', val: cfg.strictLanguage, env: false, type: 'checkbox' },
-                { id: 'radarr-profile', val: cfg.radarrQualityProfileId, env: false },
+                { id: 'radarr-profile', val: cfg.radarrQualityProfileId, env: false, type: 'select' },
             ];
             
             fields.forEach(f => {
@@ -137,6 +137,8 @@ async function loadConfig() {
                 } else if (f.val !== undefined) {
                     if (f.type === 'checkbox') {
                         el.checked = f.val;
+                    } else if (f.type === 'select') {
+                        // Select logic is handled after population
                     } else {
                         el.value = f.val;
                     }
@@ -145,6 +147,30 @@ async function loadConfig() {
         }
     } catch (e) {
         console.error("Failed to load config:", e);
+    }
+
+    // New: Fetch and populate Radarr profiles
+    await fetchRadarrProfiles();
+}
+
+async function fetchRadarrProfiles() {
+    const profileSelect = document.getElementById('radarr-profile');
+    try {
+        const res = await fetch('/api/radarr/profiles');
+        if (res.ok) {
+            const profiles = await res.json();
+            profileSelect.innerHTML = profiles.map(p => `
+                <option value="${p.id}">${p.name}</option>
+            `).join('');
+            
+            // Re-select current value from config if available
+            const currentCfg = await (await fetch('/api/config')).json();
+            if (currentCfg.radarrQualityProfileId) {
+                profileSelect.value = currentCfg.radarrQualityProfileId;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch Radarr profiles:", e);
     }
 }
 

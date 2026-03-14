@@ -136,11 +136,6 @@ func triggerEngineLogic(searchOnly bool) {
 	cfg := config.GetConfig()
 	jClient := media.NewJellyfinClient(cfg.JellyfinURL, cfg.JellyfinKey)
 	tClient := discovery.NewTMDBClient(cfg.TMDBKey)
-	gClient, err := discovery.NewGeminiClient(cfg.GeminiKey)
-	if err != nil {
-		fmt.Printf("Failed to initialize Gemini: %v\n", err)
-		return
-	}
 	rClient := downloader.NewClient(cfg.RadarrURL, cfg.RadarrKey)
 
 	updateStatus := func(msg string, running bool) {
@@ -160,41 +155,49 @@ func triggerEngineLogic(searchOnly bool) {
 		config.SaveState(state)
 	}
 
+	// Initialize Discovery Provider
+	provider, err := discovery.GetProvider(cfg.GeminiKey)
+	if err != nil {
+		fmt.Printf("Error initializing provider: %v\n", err)
+		updateStatus(fmt.Sprintf("Provider Error: %v", err), false)
+		return
+	}
+
 	if searchOnly {
-		movie, err := logic.DiscoverNewMovie(jClient, tClient, gClient, rClient, updateStatus)
+		movie, err := logic.DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, true)
 		if err != nil {
 			fmt.Printf("Error searching: %v\n", err)
 			updateStatus(fmt.Sprintf("Error: %v", err), false)
 		} else if movie != nil {
 			updateStatus("Found a suggestion!", false)
-			config.SaveState(config.AppState{
-				LastMovieTitle:      movie.Title,
-				LastMoviePosterPath: movie.PosterPath,
-				LastMovieOverview:   movie.Overview,
-				LastMovieRating:     movie.VoteAverage,
-				LastMovieID:         movie.ID,
-				Status:              "Suggestion Found!",
-				IsRunning:           false,
-				IsSuggested:         true,
-			})
+			state := config.GetState()
+			state.LastMovieTitle = movie.Title
+			state.LastMoviePosterPath = movie.PosterPath
+			state.LastMovieOverview = movie.Overview
+			state.LastMovieRating = movie.VoteAverage
+			state.LastMovieID = movie.ID
+			state.Status = "Suggestion Found!"
+			state.IsRunning = false
+			state.IsSuggested = true
+			config.SaveState(state)
 		}
 	} else {
-		movie, err := logic.RunFridayNightRoutine(jClient, tClient, gClient, rClient, updateStatus)
+		movie, err := logic.RunFridayNightRoutine(cfg, jClient, tClient, rClient, provider, updateStatus)
 		if err != nil {
 			fmt.Printf("Error running routine: %v\n", err)
 			updateStatus(fmt.Sprintf("Error: %v", err), false)
 		} else if movie != nil {
 			fmt.Printf("Routine finished successfully. Selected: %s\n", movie.Title)
-			config.SaveState(config.AppState{
-				LastMovieTitle:      movie.Title,
-				LastMoviePosterPath: movie.PosterPath,
-				LastMovieOverview:   movie.Overview,
-				LastMovieRating:     movie.VoteAverage,
-				LastMovieID:         movie.ID,
-				Status:              "Movie Added!",
-				IsRunning:           false,
-				IsSuggested:         false,
-			})
+			state := config.GetState()
+			state.LastMovieTitle = movie.Title
+			state.LastMoviePosterPath = movie.PosterPath
+			state.LastMovieOverview = movie.Overview
+			state.LastMovieRating = movie.VoteAverage
+			state.LastMovieID = movie.ID
+			state.Status = "Movie Added!"
+			state.IsRunning = false
+			state.IsSuggested = false
+			config.SaveState(state)
 		}
 	}
 }

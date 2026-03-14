@@ -2,25 +2,20 @@ package logic
 
 import (
 	"fmt"
-	"sort"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/user/friday-night-movie/pkg/config"
 	"github.com/user/friday-night-movie/pkg/discovery"
 	"github.com/user/friday-night-movie/pkg/downloader"
 	"github.com/user/friday-night-movie/pkg/media"
 )
 
 // RunFridayNightRoutine orchestrates finding a new movie and sending it to Radarr (Auto-add)
-func RunFridayNightRoutine(
-	jClient *media.JellyfinClient,
-	tClient *discovery.TMDBClient,
-	gClient *discovery.GeminiClient,
-	rClient *downloader.Client,
-	updateStatus func(string, bool),
-) (*discovery.TMDBMovie, error) {
-	movie, err := DiscoverNewMovie(jClient, tClient, gClient, rClient, updateStatus)
+func RunFridayNightRoutine(cfg config.AppConfig, jClient *media.JellyfinClient, tClient *discovery.TMDBClient, rClient *downloader.Client, provider discovery.MovieDiscoverer, updateStatus func(string, bool)) (*discovery.TMDBMovie, error) {
+	movie, err := DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, false)
 	if err != nil {
 		return nil, err
 	}
@@ -41,15 +36,9 @@ var (
 
 const cacheTTL = 2 * time.Minute
 
-// DiscoverNewMovie finds a movie via Gemini but DOES NOT add it to Radarr
-func DiscoverNewMovie(
-	jClient *media.JellyfinClient,
-	tClient *discovery.TMDBClient,
-	gClient *discovery.GeminiClient,
-	rClient *downloader.Client,
-	updateStatus func(string, bool),
-) (*discovery.TMDBMovie, error) {
-	updateStatus("Fetching existing library...", true)
+// DiscoverNewMovie orchestrates the entire discovery flow: library -> expert -> tmdb -> radarr
+func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClient *downloader.Client, tClient *discovery.TMDBClient, provider discovery.MovieDiscoverer, updateStatus func(string, bool), discoverOnly bool) (*discovery.TMDBMovie, error) {
+	updateStatus("Fetching library & cinema history...", true)
 
 	cacheMutex.RLock()
 	useCache := time.Since(cacheTime) < cacheTTL && len(jellyfinCache) > 0
@@ -66,18 +55,14 @@ func DiscoverNewMovie(
 		cacheMutex.RUnlock()
 		fmt.Println("Using in-memory library cache")
 	} else {
-		// 1. Get existing movies from Jellyfin
 		jellyfinMovies, err = jClient.GetMovies("")
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
 		}
-
-		// 2. Get existing movies from Radarr
 		radarrMovies, err = rClient.GetMovies()
 		if err != nil {
 			fmt.Printf("Warning: Failed to fetch Radarr movies: %v\n", err)
 		}
-
 		// Update cache
 		cacheMutex.Lock()
 		jellyfinCache = jellyfinMovies
@@ -98,8 +83,6 @@ func DiscoverNewMovie(
 			}
 		}
 	}
-
-	// 2. Populate lists
 	for _, m := range radarrMovies {
 		existingTitles[m.Title] = true
 		if m.TmdbId > 0 {
@@ -107,45 +90,15 @@ func DiscoverNewMovie(
 		}
 	}
 
-	// 3. Discovery Loop (with Retries)
+	maxRetries := 2
 	var selectedMovie *discovery.TMDBMovie
-	maxRetries := 3
 
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		retryMsg := ""
-		if attempt > 1 {
-			retryMsg = fmt.Sprintf(" (Attempt %d/%d)", attempt, maxRetries)
-		}
-		updateStatus("Gemini Thinking & Searching..."+retryMsg, true)
-
-		// Prepare history (Optimized for tokens)
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Calculate history strings for LLM
 		var historyStrings []string
-
-		// 1. Top Genres Summarization
-		genreCounts := make(map[string]int)
-		for _, m := range jellyfinMovies {
-			for _, g := range m.Genres {
-				genreCounts[g]++
-			}
-		}
-		// Sort genres by count (simple manual sort for top 10)
-		type genreStat struct {
-			Name  string
-			Count int
-		}
-		var topGenres []genreStat
-		for name, count := range genreCounts {
-			topGenres = append(topGenres, genreStat{name, count})
-		}
-		sort.Slice(topGenres, func(i, j int) bool {
-			return topGenres[i].Count > topGenres[j].Count
-		})
 		
-		genreSummary := ""
-		for i, g := range topGenres {
-			if i >= 10 { break }
-			genreSummary += fmt.Sprintf("%s (%d), ", g.Name, g.Count)
-		}
+		// 1. Genres Summary (Top 10)
+		genreSummary := jClient.GetTopGenres(10)
 		if genreSummary != "" {
 			historyStrings = append(historyStrings, "User's favorite genres: "+strings.TrimSuffix(genreSummary, ", "))
 		}
@@ -154,17 +107,37 @@ func DiscoverNewMovie(
 		historyStrings = append(historyStrings, "Recently watched/queued movies (for style reference):")
 		limit := 40
 		count := 0
-		// Iterate backwards to get latest (assuming Jellyfin order or just taking first 40 for now)
 		for i := len(jellyfinMovies)-1; i >= 0 && count < limit; i-- {
 			historyStrings = append(historyStrings, jellyfinMovies[i].Name)
 			count++
 		}
 
-		suggestion, err := gClient.DiscoverMovie(historyStrings, func(msg string) {
+		// 3. TMDB Freshness Bridge (Grounding for non-search models)
+		isGemini := true
+		providerType := os.Getenv("LLM_PROVIDER")
+		if providerType != "" && providerType != "gemini" {
+			isGemini = false
+		}
+
+		if !isGemini {
+			updateStatus("Grounding Expert with latest cinema releases...", true)
+			trending, err := tClient.GetTrendingMovies()
+			if err == nil && len(trending) > 0 {
+				historyStrings = append(historyStrings, "\nCURRENT CINEMA CONTEXT (Released 2024-2026):")
+				for i, m := range trending {
+					if i >= 15 { break }
+					historyStrings = append(historyStrings, fmt.Sprintf("%s (%s)", m.Title, m.ReleaseDate))
+				}
+				historyStrings = append(historyStrings, "Instructions: You may recommend from this list IF it fits the user, or use it to inform your expertise on recent trends.")
+			}
+		}
+
+		// 4. Discover via Expert LLM
+		suggestion, err := provider.DiscoverMovie(historyStrings, func(msg string) {
 			updateStatus(msg, true)
 		})
 		if err != nil {
-			return nil, fmt.Errorf("gemini discovery failed: %w", err)
+			return nil, fmt.Errorf("expert discovery failed: %w", err)
 		}
 
 		updateStatus(fmt.Sprintf("Resolving '%s' (%d) on TMDB...", suggestion.Title, suggestion.Year), true)
@@ -174,18 +147,18 @@ func DiscoverNewMovie(
 				fmt.Printf("TMDB resolution failed, retrying... error: %v\n", err)
 				continue
 			}
-			return nil, fmt.Errorf("failed to sync gemini result with tmdb (%s): %w", suggestion.SearchQuery, err)
+			return nil, fmt.Errorf("failed to sync expert result with tmdb (%s): %w", suggestion.Title, err)
 		}
 
-		// 5. Check if it's already in our library (Robust ID + Title check)
+		// 5. Check if it's already in our library
 		if existingIDs[movie.ID] || existingTitles[movie.Title] {
 			if attempt < maxRetries {
-				fmt.Printf("Gemini suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)
+				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)
 				existingIDs[movie.ID] = true
 				existingTitles[movie.Title] = true
 				continue
 			}
-			return nil, fmt.Errorf("gemini suggested a movie we already have after %d attempts: %s", maxRetries, movie.Title)
+			return nil, fmt.Errorf("expert suggested a movie we already have after %d attempts: %s", maxRetries, movie.Title)
 		}
 
 		selectedMovie = movie
@@ -199,7 +172,6 @@ func DiscoverNewMovie(
 func AddMovieToRadarr(movie *discovery.TMDBMovie, rClient *downloader.Client, updateStatus func(string, bool)) error {
 	updateStatus(fmt.Sprintf("Adding '%s' to Radarr...", movie.Title), true)
 
-	// Parse year from ReleaseDate (YYYY-MM-DD)
 	year := time.Now().Year()
 	if len(movie.ReleaseDate) >= 4 {
 		fmt.Sscanf(movie.ReleaseDate[:4], "%d", &year)

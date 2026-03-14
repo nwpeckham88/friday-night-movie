@@ -49,19 +49,20 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string, notify func(string)) 
 		historyContext = strings.Join(userHistory, ", ")
 	}
 
-	prompt := fmt.Sprintf(`You are a top-tier movie recommendation engine.
-Your task is to recommend ONE perfect movie for the user to watch tonight.
+	prompt := fmt.Sprintf(`You are a World-class Movie Expert and Cinema Historian.
+Your goal is to recommend ONE perfect, high-quality movie for the user.
 
 Context:
 - Today's Date: %s
-- The user's recently watched/archived movies (including genres to help understand their taste): %s
+- The user's recently watched/archived movies: %s
 
 Instructions:
-1. Use user history and top genres to recommend ONE perfect movie.
-2. Consider current date/season.
-3. DO NOT recommend items from the provided history list.
-4. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
-5. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
+1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
+2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
+3. Suggest a movie that matches the "vibe" or "quality" of their history but offers something fresh.
+4. DO NOT recommend items from the provided history list.
+5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
+6. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
 `, dateStr, historyContext)
 
 	// Configure Generation Config with Search Grounding

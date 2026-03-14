@@ -122,6 +122,33 @@ func (t *TMDBClient) SearchMovie(title string, year int) (*TMDBMovie, error) {
 	return &result.Results[0], nil
 }
 
+// GetTrendingMovies fetches the currently trending movies from TMDB
+func (t *TMDBClient) GetTrendingMovies() ([]TMDBMovie, error) {
+	url := fmt.Sprintf("%s/3/trending/movie/week?api_key=%s", t.BaseURL, t.APIKey)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := t.HTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("tmdb api error: %s", resp.Status)
+	}
+
+	var result TMDBResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result.Results, nil
+}
+
 // GetMovie fetches a single movie by its TMDB ID
 func (t *TMDBClient) GetMovie(id int) (*TMDBMovie, error) {
 	url := fmt.Sprintf("%s/3/movie/%d?api_key=%s", t.BaseURL, id, t.APIKey)

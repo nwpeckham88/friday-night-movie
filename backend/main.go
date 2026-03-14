@@ -156,7 +156,7 @@ func triggerEngineLogic(searchOnly bool) {
 	}
 
 	// Initialize Discovery Provider
-	provider, err := discovery.GetProvider(cfg.GeminiKey)
+	provider, err := discovery.GetProvider(cfg.GeminiKey, cfg.LLMProvider)
 	if err != nil {
 		fmt.Printf("Error initializing provider: %v\n", err)
 		updateStatus(fmt.Sprintf("Provider Error: %v", err), false)

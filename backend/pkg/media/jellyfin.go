@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -73,4 +74,46 @@ func (c *JellyfinClient) GetMovies(userId string) ([]JellyfinItem, error) {
 	}
 
 	return res.Items, nil
+}
+// GetHistory is a wrapper for GetMovies to match the engine's terminology
+func (c *JellyfinClient) GetHistory() ([]JellyfinItem, error) {
+	return c.GetMovies("")
+}
+
+// GetTopGenres returns a summary of the user's most frequent genres
+func (c *JellyfinClient) GetTopGenres(limit int) string {
+	items, err := c.GetMovies("")
+	if err != nil || len(items) == 0 {
+		return ""
+	}
+
+	genreCounts := make(map[string]int)
+	for _, item := range items {
+		for _, g := range item.Genres {
+			genreCounts[g]++
+		}
+	}
+
+	type genreStat struct {
+		Name  string
+		Count int
+	}
+	var stats []genreStat
+	for name, count := range genreCounts {
+		stats = append(stats, genreStat{name, count})
+	}
+
+	sort.Slice(stats, func(i, j int) bool {
+		return stats[i].Count > stats[j].Count
+	})
+
+	summary := ""
+	for i, s := range stats {
+		if i >= limit {
+			break
+		}
+		summary += fmt.Sprintf("%s (%d), ", s.Name, s.Count)
+	}
+
+	return summary
 }

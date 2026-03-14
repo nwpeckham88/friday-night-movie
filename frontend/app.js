@@ -30,7 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
             radarrUrl: document.getElementById('radarr-url').value,
             radarrKey: document.getElementById('radarr-key').value,
             tmdbKey: document.getElementById('tmdb-key').value,
-            geminiKey: document.getElementById('gemini-key').value
+            geminiKey: document.getElementById('gemini-key').value,
+            llmProvider: document.getElementById('llm-provider').value
         };
 
         // In a real app, send to backend API
@@ -70,6 +71,7 @@ async function loadConfig() {
                 { id: 'radarr-key', val: cfg.radarrKey, env: cfg.radarrKeyFromEnv },
                 { id: 'tmdb-key', val: cfg.tmdbKey, env: cfg.tmdbKeyFromEnv },
                 { id: 'gemini-key', val: cfg.geminiKey, env: cfg.geminiKeyFromEnv },
+                { id: 'llm-provider', val: cfg.llmProvider, env: cfg.llmProviderFromEnv },
             ];
             
             fields.forEach(f => {

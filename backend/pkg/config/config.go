@@ -14,6 +14,7 @@ type AppConfig struct {
 	RadarrKey    string `json:"radarrKey"`
 	TMDBKey      string `json:"tmdbKey"`
 	GeminiKey    string `json:"geminiKey"`
+	LLMProvider  string `json:"llmProvider"`
 }
 
 // AppState represents the active state of the app
@@ -76,6 +77,13 @@ func GetConfig() AppConfig {
 		cfg.GeminiKey = os.Getenv("GEMINI_KEY")
 	}
 
+	if cfg.LLMProvider == "" {
+		cfg.LLMProvider = os.Getenv("LLM_PROVIDER")
+		if cfg.LLMProvider == "" {
+			cfg.LLMProvider = "gemini"
+		}
+	}
+
 	return cfg
 }
 
@@ -93,6 +101,7 @@ func GetFrontendConfig() map[string]interface{} {
 		"radarrKey":   cfg.RadarrKey,
 		"tmdbKey":     cfg.TMDBKey,
 		"geminiKey":   cfg.GeminiKey,
+		"llmProvider": cfg.LLMProvider,
 		
 		"jellyfinUrlFromEnv": false,
 		"jellyfinKeyFromEnv": false,
@@ -129,6 +138,13 @@ func GetFrontendConfig() map[string]interface{} {
 	} else if cfg.GeminiKey == "" && os.Getenv("GEMINI_KEY") != "" {
 		res["geminiKey"] = os.Getenv("GEMINI_KEY")
 		res["geminiKeyFromEnv"] = true
+	}
+
+	if cfg.LLMProvider == "" && os.Getenv("LLM_PROVIDER") != "" {
+		res["llmProvider"] = os.Getenv("LLM_PROVIDER")
+		res["llmProviderFromEnv"] = true
+	} else if cfg.LLMProvider == "" {
+		res["llmProvider"] = "gemini"
 	}
 
 	return res

@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -11,10 +10,12 @@ type MovieDiscoverer interface {
 }
 
 // GetProvider returns the appropriate discovery provider based on configuration
-func GetProvider(apiKey string) (MovieDiscoverer, error) {
-	provider := os.Getenv("LLM_PROVIDER")
+func GetProvider(apiKey string, provider string) (MovieDiscoverer, error) {
 	if provider == "" {
-		provider = "gemini" // Default
+		provider = os.Getenv("LLM_PROVIDER")
+		if provider == "" {
+			provider = "gemini" // Default
+		}
 	}
 
 	switch provider {

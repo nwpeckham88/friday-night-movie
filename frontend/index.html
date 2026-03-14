@@ -83,8 +83,16 @@
                         <input type="password" id="tmdb-key">
                     </div>
                     <div class="form-group">
-                        <label for="gemini-key">Gemini API Key</label>
+                        <label for="gemini-key">Gemini/LLM API Key</label>
                         <input type="password" id="gemini-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="llm-provider">Expert Discovery Brain</label>
+                        <select id="llm-provider">
+                            <option value="gemini">Google Gemini (Built-in Search)</option>
+                            <option value="groq">Groq (Llama 3.1 - Fast)</option>
+                            <option value="openrouter">OpenRouter (Universal)</option>
+                        </select>
                     </div>
                     <button type="submit" class="btn-primary">Save Settings</button>
                 </form>

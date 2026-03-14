@@ -237,6 +237,7 @@ async function mockLoadData() {
                     actionButton = `
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start; flex-wrap: wrap; position: relative;">
                             <button class="btn-primary" style="background: var(--success-color); box-shadow: 0 0 15px var(--success-color); width: auto;" onclick="addMovie(${state.lastMovieId})">Add to Queue</button>
+                            <button class="btn-secondary" style="width: auto; background: rgba(0, 150, 255, 0.2); border: 1px solid var(--accent-color); color: white;" onclick="endorseMovie(${state.lastMovieId})" title="Like this but don't download"><span>⭐</span> Endorse</button>
                             <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.1); border: 1px solid var(--panel-border);" onclick="rejectMovie(${state.lastMovieId})">Not Interested</button>
                             <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);" onclick="triggerSearch()">Search Again</button>
                             <button class="btn-icon" style="position: absolute; top: -110px; right: -10px; background: rgba(0,0,0,0.5); border: 1px solid var(--panel-border); color: var(--text-secondary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem;" onclick="clearSuggestion()" title="Clear Suggestion">✕</button>
@@ -428,6 +429,24 @@ async function clearSuggestion() {
         }
     } catch (e) {
         console.error("Failed to clear suggestion:", e);
+    }
+}
+
+async function endorseMovie(tmdbId) {
+    try {
+        const res = await fetch('/api/endorse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tmdbId: tmdbId })
+        });
+        if (res.ok) {
+            mockLoadData();
+        } else {
+            const data = await res.json();
+            alert('Failed to endorse movie: ' + (data.status || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error("Failed to endorse movie:", e);
     }
 }
 

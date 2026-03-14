@@ -53,6 +53,7 @@ func main() {
 		r.Get("/downloads", getDownloads)
 		r.Post("/test-llm", testLLM)
 		r.Post("/reject", rejectMovie)
+		r.Post("/endorse", endorseMovie)
 		r.Post("/clear-suggestion", clearSuggestion)
 	})
 
@@ -171,6 +172,35 @@ func rejectMovie(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "Movie rejected"})
+}
+
+func endorseMovie(w http.ResponseWriter, r *http.Request) {
+	state := config.GetState()
+	if state.LastMovieTitle == "" {
+		http.Error(w, "No active suggestion to endorse", http.StatusBadRequest)
+		return
+	}
+
+	provider, err := discovery.GetProvider(config.GetConfig().GeminiKey, config.GetConfig().LLMProvider)
+	if err == nil {
+		newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{state.LastMovieTitle}, state.RejectedMovies, fmt.Sprintf("User endorsed (Liked) but did not download: %s", state.LastMovieTitle))
+		if err == nil {
+			state.TasteProfile = newProfile
+		}
+	}
+
+	// Move on (Clear suggestion)
+	state.LastMovieTitle = ""
+	state.LastMoviePosterPath = ""
+	state.LastMovieOverview = ""
+	state.LastMovieRating = 0
+	state.LastMovieID = 0
+	state.IsSuggested = false
+	state.Status = "Movie Endorsed!"
+	config.SaveState(state)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "Movie endorsed"})
 }
 
 func clearSuggestion(w http.ResponseWriter, r *http.Request) {

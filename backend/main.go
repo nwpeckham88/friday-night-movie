@@ -51,6 +51,7 @@ func main() {
 		r.Get("/history", getHistory)
 		r.Get("/downloads", getDownloads)
 		r.Post("/test-llm", testLLM)
+		r.Post("/reject", rejectMovie)
 	})
 
 	sched.ScheduleFridayNightJob(func() {
@@ -127,9 +128,47 @@ func addManual(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go triggerAddLogic(body.TMDBID)
+}
+
+func rejectMovie(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TMDBID int `json:"tmdbId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	state := config.GetState()
+	cfg := config.GetConfig()
+	tClient := discovery.NewTMDBClient(cfg.TMDBKey)
+	movie, err := tClient.GetMovie(body.TMDBID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Add to rejected list
+	state.RejectedMovies = append(state.RejectedMovies, fmt.Sprintf("%s (%d)", movie.Title, body.TMDBID))
+	state.LastMovieTitle = "" // Clear suggestion
+	state.IsSuggested = false
+	config.SaveState(state)
+
+	// Trigger profile update in background
+	go func() {
+		provider, _ := discovery.GetProvider(cfg.GeminiKey, cfg.LLMProvider)
+		if provider != nil {
+			newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{}, state.RejectedMovies, fmt.Sprintf("Rejected: %s", movie.Title))
+			if err == nil {
+				state := config.GetState()
+				state.TasteProfile = newProfile
+				config.SaveState(state)
+			}
+		}
+	}()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "Addition triggered"})
+	json.NewEncoder(w).Encode(map[string]string{"status": "Movie rejected"})
 }
 
 func triggerEngineLogic(searchOnly bool) {
@@ -199,6 +238,16 @@ func triggerEngineLogic(searchOnly bool) {
 			state.IsRunning = false
 			state.IsSuggested = false
 			config.SaveState(state)
+
+			// Update Taste Profile on automatic pick
+			go func() {
+				newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("Automatically selected and added: %s", movie.Title))
+				if err == nil {
+					s := config.GetState()
+					s.TasteProfile = newProfile
+					config.SaveState(s)
+				}
+			}()
 		}
 	}
 }
@@ -232,6 +281,19 @@ func triggerAddLogic(tmdbId int) {
 		state.IsRunning = false
 		state.IsSuggested = false
 		config.SaveState(state)
+
+		// Update Taste Profile
+		go func() {
+			provider, _ := discovery.GetProvider(cfg.GeminiKey, cfg.LLMProvider)
+			if provider != nil {
+				newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("User accepted and added suggestion: %s", movie.Title))
+				if err == nil {
+					s := config.GetState()
+					s.TasteProfile = newProfile
+					config.SaveState(s)
+				}
+			}
+		}()
 	}
 }
 
@@ -291,8 +353,8 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simple test call with empty history
-	movie, err := provider.DiscoverMovie([]string{}, func(msg string) {})
+	// Simple test call with empty history/context
+	movie, err := provider.DiscoverMovie([]string{}, "", []string{}, func(msg string) {})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

@@ -133,7 +133,8 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 		}
 
 		// 4. Discover via Expert LLM
-		suggestion, err := provider.DiscoverMovie(historyStrings, func(msg string) {
+		state := config.GetState()
+		suggestion, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, func(msg string) {
 			updateStatus(msg, true)
 		})
 		if err != nil {
@@ -150,7 +151,18 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 			return nil, fmt.Errorf("failed to sync expert result with tmdb (%s): %w", suggestion.Title, err)
 		}
 
-		// 5. Check if it's already in our library
+		// 5. Check Language (Strict Mode)
+		if cfg.StrictLanguage && cfg.PreferredLanguage != "" {
+			if !strings.EqualFold(movie.OriginalLanguage, cfg.PreferredLanguage) {
+				if attempt < maxRetries {
+					fmt.Printf("Expert suggested '%s' in language '%s', but strict mode requires '%s'. Retrying...\n", movie.Title, movie.OriginalLanguage, cfg.PreferredLanguage)
+					continue
+				}
+				return nil, fmt.Errorf("expert failed to suggest a movie in %s after %d attempts", cfg.PreferredLanguage, maxRetries)
+			}
+		}
+
+		// 6. Check if it's already in our library
 		if existingIDs[movie.ID] || existingTitles[movie.Title] {
 			if attempt < maxRetries {
 				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)

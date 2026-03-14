@@ -68,12 +68,18 @@ func TestRunFridayNightRoutine(t *testing.T) {
 		TMDBKey:     "fake-key",
 	}
 
-	gClient, _ := discovery.NewGeminiClient("fake-key")
+	// Mock Discovery Provider
+	mock := &MockDiscoverer{
+		Suggestion: discovery.GeminiResponse{
+			Title: "New Awesome Movie",
+			Year:  2024,
+		},
+	}
 
 	rClient := downloader.NewClient(rServer.URL, "fake-key")
 
 	// Run logic
-	movie, err := RunFridayNightRoutine(cfg, jClient, tClient, rClient, gClient, func(s string, b bool) {})
+	movie, err := RunFridayNightRoutine(cfg, jClient, tClient, rClient, mock, func(s string, b bool) {})
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -83,6 +89,18 @@ func TestRunFridayNightRoutine(t *testing.T) {
 	}
 
 	if movie.Title != "New Awesome Movie" {
-		t.Errorf("Expected 'New Awesome Movie', git '%s'", movie.Title)
+		t.Errorf("Expected 'New Awesome Movie', got '%s'", movie.Title)
 	}
+}
+
+type MockDiscoverer struct {
+	Suggestion discovery.GeminiResponse
+}
+
+func (m *MockDiscoverer) DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, notify func(string)) (*discovery.GeminiResponse, error) {
+	return &m.Suggestion, nil
+}
+
+func (m *MockDiscoverer) GenerateText(prompt string) (string, error) {
+	return "Mock Profile", nil
 }

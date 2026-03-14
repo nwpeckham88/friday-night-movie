@@ -30,6 +30,7 @@ type TMDBMovie struct {
 	PosterPath       string   `json:"poster_path"`
 	VoteAverage      float64  `json:"vote_average"`
 	GenreIDs         []int    `json:"genre_ids"`
+	OriginalLanguage string   `json:"original_language"`
 }
 
 type TMDBResponse struct {

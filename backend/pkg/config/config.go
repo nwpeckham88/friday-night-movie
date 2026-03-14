@@ -15,6 +15,8 @@ type AppConfig struct {
 	TMDBKey      string `json:"tmdbKey"`
 	GeminiKey    string `json:"geminiKey"`
 	LLMProvider  string `json:"llmProvider"`
+	PreferredLanguage string `json:"preferredLanguage"`
+	StrictLanguage    bool   `json:"strictLanguage"`
 }
 
 // AppState represents the active state of the app
@@ -104,6 +106,8 @@ func GetFrontendConfig() map[string]interface{} {
 		"tmdbKey":     cfg.TMDBKey,
 		"geminiKey":   cfg.GeminiKey,
 		"llmProvider": cfg.LLMProvider,
+		"preferredLanguage": cfg.PreferredLanguage,
+		"strictLanguage":    cfg.StrictLanguage,
 		
 		"jellyfinUrlFromEnv": false,
 		"jellyfinKeyFromEnv": false,
@@ -147,6 +151,12 @@ func GetFrontendConfig() map[string]interface{} {
 		res["llmProviderFromEnv"] = true
 	} else if cfg.LLMProvider == "" {
 		res["llmProvider"] = "gemini"
+	}
+
+	if cfg.PreferredLanguage == "" && os.Getenv("PREFERRED_LANGUAGE") != "" {
+		res["preferredLanguage"] = os.Getenv("PREFERRED_LANGUAGE")
+	} else if cfg.PreferredLanguage == "" {
+		res["preferredLanguage"] = "en"
 	}
 
 	return res

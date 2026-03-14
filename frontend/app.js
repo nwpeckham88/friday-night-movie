@@ -31,7 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
             radarrKey: document.getElementById('radarr-key').value,
             tmdbKey: document.getElementById('tmdb-key').value,
             geminiKey: document.getElementById('gemini-key').value,
-            llmProvider: document.getElementById('llm-provider').value
+            llmProvider: document.getElementById('llm-provider').value,
+            preferredLanguage: document.getElementById('preferred-language').value,
+            strictLanguage: document.getElementById('strict-language').checked
         };
 
         // In a real app, send to backend API
@@ -114,6 +116,8 @@ async function loadConfig() {
                 { id: 'tmdb-key', val: cfg.tmdbKey, env: cfg.tmdbKeyFromEnv },
                 { id: 'gemini-key', val: cfg.geminiKey, env: cfg.geminiKeyFromEnv },
                 { id: 'llm-provider', val: cfg.llmProvider, env: cfg.llmProviderFromEnv },
+                { id: 'preferred-language', val: cfg.preferredLanguage, env: false },
+                { id: 'strict-language', val: cfg.strictLanguage, env: false, type: 'checkbox' },
             ];
             
             fields.forEach(f => {
@@ -128,8 +132,12 @@ async function loadConfig() {
                     if (label && !label.innerHTML.includes('Loaded from environment')) {
                         label.innerHTML += ' <span style="color: var(--success-color); font-size: 0.75rem; margin-left: 0.5rem; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid var(--success-color);">Loaded from environment</span>';
                     }
-                } else if (f.val) {
-                    el.value = f.val;
+                } else if (f.val !== undefined) {
+                    if (f.type === 'checkbox') {
+                        el.checked = f.val;
+                    } else {
+                        el.value = f.val;
+                    }
                 }
             });
         }
@@ -155,6 +163,12 @@ async function mockLoadData() {
             
             if (statusEl) {
                 statusEl.innerText = state.status || "";
+            }
+
+            // Update Taste Profile
+            const tasteEl = document.getElementById('taste-profile-content');
+            if (tasteEl) {
+                tasteEl.innerHTML = (state.tasteProfile || "Establishing your cinematic taste... Check back after a few searches.").replace(/\n/g, '<br>');
             }
 
             if (state.isRunning) {
@@ -195,7 +209,8 @@ async function mockLoadData() {
                     actionButton = `
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start; flex-wrap: wrap;">
                             <button class="btn-primary" style="background: var(--success-color); box-shadow: 0 0 15px var(--success-color); width: auto;" onclick="addMovie(${state.lastMovieId})">Add to Queue</button>
-                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.1);" onclick="triggerSearch()">Try Another Suggestion</button>
+                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.1); border: 1px solid var(--panel-border);" onclick="rejectMovie(${state.lastMovieId})">Not Interested</button>
+                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);" onclick="triggerSearch()">Try Another</button>
                         </div>
                     `;
                 }
@@ -351,5 +366,25 @@ async function addMovie(tmdbId) {
         }
     } catch (e) {
         console.error("Failed to add movie:", e);
+    }
+}
+
+async function rejectMovie(tmdbId) {
+    if (!confirm('Are you sure you want to reject this suggestion? It will never be recommended again.')) return;
+    
+    try {
+        const res = await fetch('/api/reject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tmdbId: tmdbId })
+        });
+        if (res.ok) {
+            mockLoadData();
+        } else {
+            const data = await res.json();
+            alert('Failed to reject movie: ' + (data.status || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error("Failed to reject movie:", e);
     }
 }

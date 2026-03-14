@@ -103,17 +103,61 @@ async function mockLoadData() {
         const stateRes = await fetch('/api/state');
         if (stateRes.ok) {
             const state = await stateRes.json();
+            
+            // Update Engine Status UI
+            const statusEl = document.getElementById('engine-status');
+            const triggerBtn = document.getElementById('trigger-btn');
+            
+            if (statusEl) {
+                statusEl.innerText = state.status || "";
+            }
+
+            if (state.isRunning) {
+                if (triggerBtn) {
+                    triggerBtn.disabled = true;
+                    triggerBtn.style.opacity = '0.5';
+                    triggerBtn.innerText = 'Searching...';
+                }
+                // Poll for updates every 2 seconds if running
+                if (!window.statusInterval) {
+                    window.statusInterval = setInterval(mockLoadData, 2000);
+                }
+            } else {
+                if (triggerBtn) {
+                    triggerBtn.disabled = false;
+                    triggerBtn.style.opacity = '1';
+                    triggerBtn.innerHTML = '<span>🎲</span> I\'m feeling lucky';
+                }
+                if (window.statusInterval) {
+                    clearInterval(window.statusInterval);
+                    window.statusInterval = null;
+                }
+            }
+
             if (state && state.lastMovieTitle) {
                 const posterUrl = state.lastMoviePosterPath ? `https://image.tmdb.org/t/p/w500${state.lastMoviePosterPath}` : 'https://via.placeholder.com/200x300?text=No+Poster';
                 currentMovieArea.innerHTML = `
-                    <img class="movie-poster fade-in" src="${posterUrl}" alt="${state.lastMovieTitle}">
-                    <div class="movie-info fade-in" style="animation-delay: 0.2s;">
-                        <h3 style="color: var(--text-primary); font-size: 1.5rem;">${state.lastMovieTitle}</h3>
-                        <p>${state.lastMovieOverview}</p>
-                        <div class="movie-meta">
-                            <span>⭐ ${state.lastMovieRating}/10</span>
+                    <div class="movie-card-active fade-in">
+                        <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}">
+                        <div class="movie-info">
+                            <h3 style="color: var(--text-primary); font-size: 1.5rem;">${state.lastMovieTitle}</h3>
+                            <p>${state.lastMovieOverview}</p>
+                            <div class="movie-meta">
+                                <span>⭐ ${state.lastMovieRating}/10</span>
+                            </div>
+                            <button id="trigger-btn" class="btn-primary" style="margin-top: 1rem; width: auto;" onclick="triggerJob()">Roll Again</button>
+                            <div id="engine-status" style="margin-top: 1rem; color: var(--accent-color); font-weight: 600;">${state.status || ""}</div>
                         </div>
-                        <button class="btn-primary" style="margin-top: 1rem; width: auto;" onclick="triggerJob()">Trigger Next Movie Now</button>
+                    </div>
+                `;
+            } else if (state.isRunning) {
+                // If it's running but we don't have a movie title yet, show the selecting screen
+                currentMovieArea.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;" class="fade-in">
+                        <div class="loading-pulse" style="margin-bottom: 2rem;">Selecting a movie...</div>
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Gemini is currently browsing for your perfect movie selection.</p>
+                        <button id="trigger-btn" class="btn-primary" disabled style="opacity: 0.5; margin: 0 auto;">Searching...</button>
+                        <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;">${state.status || ""}</div>
                     </div>
                 `;
             } else {
@@ -198,20 +242,16 @@ async function showDefaultMovie(container) {
 
 async function triggerJob() {
     try {
-        const container = document.getElementById('current-movie');
-        container.innerHTML = '<div class="loading-pulse">Selecting a movie now...</div>';
-        
         const res = await fetch('/api/trigger', { method: 'POST' });
         if (res.ok) {
-            // Wait a moment for the backend job to complete
-            setTimeout(mockLoadData, 3000);
+            // Start polling for status
+            mockLoadData();
         } else {
-            alert('Failed to trigger the movie engine.');
-            showDefaultMovie(container);
+            const data = await res.json();
+            alert('Failed: ' + (data.status || 'Unknown error'));
         }
     } catch (e) {
         console.error("Failed to trigger job:", e);
         alert('Failed to trigger the movie engine.');
-        showDefaultMovie(document.getElementById('current-movie'));
     }
 }

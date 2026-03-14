@@ -119,10 +119,26 @@ func triggerEngineLogic() {
 		return
 	}
 	rClient := downloader.NewClient(cfg.RadarrURL, cfg.RadarrKey)
-	
-	movie, err := logic.RunFridayNightRoutine(jClient, tClient, gClient, rClient)
+
+	updateStatus := func(msg string, running bool) {
+		fmt.Printf("[Status] %s (Running: %v)\n", msg, running)
+		state := config.GetState()
+		state.Status = msg
+		state.IsRunning = running
+		// If starting, clear last movie info to show we are searching
+		if running && msg == "Fetching existing library..." {
+			state.LastMovieTitle = ""
+			state.LastMoviePosterPath = ""
+			state.LastMovieOverview = ""
+			state.LastMovieRating = 0
+		}
+		config.SaveState(state)
+	}
+
+	movie, err := logic.RunFridayNightRoutine(jClient, tClient, gClient, rClient, updateStatus)
 	if err != nil {
 		fmt.Printf("Error running routine: %v\n", err)
+		updateStatus(fmt.Sprintf("Error: %v", err), false)
 	} else if movie != nil {
 		fmt.Printf("Routine finished successfully. Selected: %s\n", movie.Title)
 		config.SaveState(config.AppState{
@@ -130,6 +146,8 @@ func triggerEngineLogic() {
 			LastMoviePosterPath: movie.PosterPath,
 			LastMovieOverview:   movie.Overview,
 			LastMovieRating:     movie.VoteAverage,
+			Status:              "Movie Added!",
+			IsRunning:           false,
 		})
 	}
 }

@@ -18,10 +18,12 @@ type AppConfig struct {
 
 // AppState represents the active state of the app
 type AppState struct {
-	LastMovieTitle      string `json:"lastMovieTitle"`
-	LastMoviePosterPath string `json:"lastMoviePosterPath"`
-	LastMovieOverview   string `json:"lastMovieOverview"`
+	LastMovieTitle      string  `json:"lastMovieTitle"`
+	LastMoviePosterPath string  `json:"lastMoviePosterPath"`
+	LastMovieOverview   string  `json:"lastMovieOverview"`
 	LastMovieRating     float64 `json:"lastMovieRating"`
+	Status              string  `json:"status"`
+	IsRunning           bool    `json:"isRunning"`
 }
 
 // Data represents the saved JSON structure

@@ -11,11 +11,16 @@ import (
 )
 
 // RunFridayNightRoutine orchestrates finding a new movie and sending it to Radarr
-func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMDBClient, gClient *discovery.GeminiClient, rClient *downloader.Client) (*discovery.TMDBMovie, error) {
-	fmt.Println("Running Friday Night Routine...")
+func RunFridayNightRoutine(
+	jClient *media.JellyfinClient,
+	tClient *discovery.TMDBClient,
+	gClient *discovery.GeminiClient,
+	rClient *downloader.Client,
+	updateStatus func(string, bool),
+) (*discovery.TMDBMovie, error) {
+	updateStatus("Fetching existing library...", true)
 
 	// 1. Get existing movies from Jellyfin
-	fmt.Println("Fetching existing Jellyfin library...")
 	jellyfinMovies, err := jClient.GetMovies("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
@@ -25,8 +30,7 @@ func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMD
 		existingTitles[m.Name] = true
 	}
 
-	// 2. Get existing movies from Radarr (to ensure we don't try to add something already queued/downloaded)
-	fmt.Println("Fetching Radarr library...")
+	// 2. Get existing movies from Radarr
 	radarrMovies, err := rClient.GetMovies()
 	if err != nil {
 		fmt.Printf("Warning: Failed to fetch Radarr movies: %v\n", err)
@@ -35,73 +39,85 @@ func RunFridayNightRoutine(jClient *media.JellyfinClient, tClient *discovery.TMD
 		existingTitles[m.Title] = true
 	}
 
-	// 3. Discover new movie via Gemini LLM Think & Search
-	var historyStrings []string
-	for _, m := range jellyfinMovies {
-		genres := strings.Join(m.Genres, "/")
-		historyStrings = append(historyStrings, fmt.Sprintf("%s (Genres: %s)", m.Name, genres))
-	}
+	// 3. Discovery Loop (with Retries)
+	var selectedMovie *discovery.TMDBMovie
+	maxRetries := 3
 
-	// Also add Radarr movies that might not be in Jellyfin yet, just by title
-	for title := range existingTitles {
-		found := false
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		retryMsg := ""
+		if attempt > 1 {
+			retryMsg = fmt.Sprintf(" (Attempt %d/%d)", attempt, maxRetries)
+		}
+		updateStatus("Gemini Thinking & Searching..."+retryMsg, true)
+
+		// Prepare history
+		var historyStrings []string
 		for _, m := range jellyfinMovies {
-			if m.Name == title {
-				found = true
-				break
+			genres := strings.Join(m.Genres, "/")
+			historyStrings = append(historyStrings, fmt.Sprintf("%s (Genres: %s)", m.Name, genres))
+		}
+
+		for title := range existingTitles {
+			found := false
+			for _, m := range jellyfinMovies {
+				if m.Name == title {
+					found = true
+					break
+				}
+			}
+			if !found {
+				historyStrings = append(historyStrings, title)
 			}
 		}
-		if !found {
-			historyStrings = append(historyStrings, title)
+
+		suggestion, err := gClient.DiscoverMovie(historyStrings)
+		if err != nil {
+			return nil, fmt.Errorf("gemini discovery failed: %w", err)
 		}
+
+		updateStatus(fmt.Sprintf("Resolving '%s' on TMDB...", suggestion.Title), true)
+		movie, err := tClient.SearchMovie(suggestion.SearchQuery)
+		if err != nil {
+			if attempt < maxRetries {
+				fmt.Printf("TMDB resolution failed, retrying... error: %v\n", err)
+				continue
+			}
+			return nil, fmt.Errorf("failed to sync gemini result with tmdb (%s): %w", suggestion.SearchQuery, err)
+		}
+
+		// 5. Check if it's already in our library
+		if existingTitles[movie.Title] {
+			if attempt < maxRetries {
+				fmt.Printf("Gemini suggested duplicate '%s', retrying...\n", movie.Title)
+				existingTitles[movie.Title] = true // Ensure it stays in the "blacklist" for next retry
+				continue
+			}
+			return nil, fmt.Errorf("gemini suggested a movie we already have after %d attempts: %s", maxRetries, movie.Title)
+		}
+
+		selectedMovie = movie
+		break
 	}
 
-	fmt.Printf("Sending %d history items to Gemini (with genres where available)...\n", len(historyStrings))
+	updateStatus(fmt.Sprintf("Adding '%s' to Radarr...", selectedMovie.Title), true)
 
-	suggestion, err := gClient.DiscoverMovie(historyStrings)
-	if err != nil {
-		return nil, fmt.Errorf("gemini discovery failed: %w", err)
-	}
-
-	fmt.Printf("Gemini Suggested: %s (%d)\n", suggestion.Title, suggestion.Year)
-
-	// 4. Resolve the title to a TMDB ID
-	fmt.Printf("Resolving title to TMDB ID using query: %s...\n", suggestion.SearchQuery)
-	selectedMovie, err := tClient.SearchMovie(suggestion.SearchQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sync gemini result with tmdb (%s): %w", suggestion.SearchQuery, err)
-	}
-
-	// 5. Check if it's already in our library (Jellyfin/Radarr) by the resolved name
-	if existingTitles[selectedMovie.Title] {
-		return nil, fmt.Errorf("gemini suggested a movie we already have: %s", selectedMovie.Title)
-	}
-
-	fmt.Printf("Selected Movie: %s (TMDB ID: %d, Rating: %.1f)\n", selectedMovie.Title, selectedMovie.ID, selectedMovie.VoteAverage)
-
-	// 6. Add to Radarr
-	// Note: Radarr add requires specific fields. We need rootFolderPath and qualityProfileId.
-	// For a real setup, these should come from Config. We'll use defaults for now.
-	// We might need to fetch profiles and root folders from Radarr API first.
-	// For MVP, we'll try an optimistic payload.
 	addPayload := map[string]interface{}{
 		"title":            selectedMovie.Title,
-		"titleSlug":        fmt.Sprintf("%d", selectedMovie.ID), // simplification
+		"titleSlug":        fmt.Sprintf("%d", selectedMovie.ID),
 		"tmdbId":           selectedMovie.ID,
-		"year":             time.Now().Year(), // ideally parse from ReleaseDate
-		"qualityProfileId": 1, 
+		"year":             time.Now().Year(),
+		"qualityProfileId": 1,
 		"monitored":        true,
-		"rootFolderPath":   "/movies", // adjust to user's setup if needed later
+		"rootFolderPath":   "/movies",
 		"addOptions": map[string]bool{
 			"searchForMovie": true,
 		},
 	}
 
-	fmt.Println("Adding to Radarr...")
 	if err := rClient.AddMovie(addPayload); err != nil {
 		return nil, fmt.Errorf("failed to add movie to radarr: %w", err)
 	}
 
-	fmt.Println("Successfully added movie to Radarr queue!")
+	updateStatus("Successfully added to queue!", false)
 	return selectedMovie, nil
 }

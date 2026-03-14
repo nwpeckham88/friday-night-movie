@@ -65,7 +65,7 @@ func TestRunFridayNightRoutine(t *testing.T) {
 	rClient := downloader.NewClient(rServer.URL, "fake-key")
 
 	// Run logic
-	movie, err := RunFridayNightRoutine(jClient, tClient, gClient, rClient)
+	movie, err := RunFridayNightRoutine(jClient, tClient, gClient, rClient, func(s string, b bool) {})
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

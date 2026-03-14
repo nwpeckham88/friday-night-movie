@@ -25,9 +25,10 @@
                     <div style="text-align: center; padding: 2rem;">
                         <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Loading schedule...</h3>
                         <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
-                        <button class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
+                        <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
                             <span>Roll the Dice:</span> I'm feeling lucky
                         </button>
+                        <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;"></div>
                     </div>
                 </div>
             </section>

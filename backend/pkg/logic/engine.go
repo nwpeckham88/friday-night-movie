@@ -74,8 +74,12 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 	existingTitles := make(map[string]bool)
 	existingIDs := make(map[int]bool)
 
+	normalize := func(s string) string {
+		return strings.ToLower(strings.TrimSpace(s))
+	}
+
 	for _, m := range jellyfinMovies {
-		existingTitles[m.Name] = true
+		existingTitles[normalize(m.Name)] = true
 		if m.ProviderIds.Tmdb != "" {
 			var mid int
 			if _, err := fmt.Sscanf(m.ProviderIds.Tmdb, "%d", &mid); err == nil {
@@ -84,7 +88,7 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 		}
 	}
 	for _, m := range radarrMovies {
-		existingTitles[m.Title] = true
+		existingTitles[normalize(m.Title)] = true
 		if m.TmdbId > 0 {
 			existingIDs[m.TmdbId] = true
 		}
@@ -168,11 +172,11 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 		}
 
 		// 6. Check if it's already in our library
-		if existingIDs[movie.ID] || existingTitles[movie.Title] {
+		if existingIDs[movie.ID] || existingTitles[normalize(movie.Title)] {
 			if attempt < maxRetries {
 				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)
 				existingIDs[movie.ID] = true
-				existingTitles[movie.Title] = true
+				existingTitles[normalize(movie.Title)] = true
 				failedSuggestions = append(failedSuggestions, movie.Title)
 				continue
 			}
@@ -201,7 +205,7 @@ func AddMovieToRadarr(movie *discovery.TMDBMovie, rClient *downloader.Client, up
 		"year":             year,
 		"qualityProfileId": 1,
 		"monitored":        true,
-		"rootFolderPath":   "/movies",
+		"rootFolderPath":   "/data/media/movies",
 		"addOptions": map[string]bool{
 			"searchForMovie": true,
 		},

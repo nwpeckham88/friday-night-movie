@@ -17,6 +17,7 @@ type AppConfig struct {
 	LLMProvider  string `json:"llmProvider"`
 	PreferredLanguage string `json:"preferredLanguage"`
 	StrictLanguage    bool   `json:"strictLanguage"`
+	RadarrQualityProfileID int `json:"radarrQualityProfileId"`
 }
 
 // AppState represents the active state of the app
@@ -108,6 +109,7 @@ func GetFrontendConfig() map[string]interface{} {
 		"llmProvider": cfg.LLMProvider,
 		"preferredLanguage": cfg.PreferredLanguage,
 		"strictLanguage":    cfg.StrictLanguage,
+		"radarrQualityProfileId": cfg.RadarrQualityProfileID,
 		
 		"jellyfinUrlFromEnv": false,
 		"jellyfinKeyFromEnv": false,
@@ -157,6 +159,10 @@ func GetFrontendConfig() map[string]interface{} {
 		res["preferredLanguage"] = os.Getenv("PREFERRED_LANGUAGE")
 	} else if cfg.PreferredLanguage == "" {
 		res["preferredLanguage"] = "en"
+	}
+
+	if cfg.RadarrQualityProfileID == 0 {
+		res["radarrQualityProfileId"] = 1 // Default to 1
 	}
 
 	return res

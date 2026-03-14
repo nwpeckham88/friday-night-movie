@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
             geminiKey: document.getElementById('gemini-key').value,
             llmProvider: document.getElementById('llm-provider').value,
             preferredLanguage: document.getElementById('preferred-language').value,
-            strictLanguage: document.getElementById('strict-language').checked
+            strictLanguage: document.getElementById('strict-language').checked,
+            radarrQualityProfileId: parseInt(document.getElementById('radarr-profile').value) || 1
         };
 
         // In a real app, send to backend API
@@ -118,6 +119,7 @@ async function loadConfig() {
                 { id: 'llm-provider', val: cfg.llmProvider, env: cfg.llmProviderFromEnv },
                 { id: 'preferred-language', val: cfg.preferredLanguage, env: false },
                 { id: 'strict-language', val: cfg.strictLanguage, env: false, type: 'checkbox' },
+                { id: 'radarr-profile', val: cfg.radarrQualityProfileId, env: false },
             ];
             
             fields.forEach(f => {

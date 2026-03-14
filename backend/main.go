@@ -56,7 +56,7 @@ func main() {
 	})
 
 	sched.ScheduleFridayNightJob(func() {
-		triggerEngineLogic(false) // Auto-mode
+		triggerEngineLogic(false, true) // Auto-mode: Lucky + AutoAdd
 	})
 	sched.Start()
 	defer sched.Stop()
@@ -108,13 +108,13 @@ func getState(w http.ResponseWriter, r *http.Request) {
 }
 
 func triggerRoutine(w http.ResponseWriter, r *http.Request) {
-	go triggerEngineLogic(false) // Lucky mode
+	go triggerEngineLogic(false, false) // Lucky mode, NO AutoAdd
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "Lucky selection triggered"})
 }
 
 func triggerSearch(w http.ResponseWriter, r *http.Request) {
-	go triggerEngineLogic(true) // Search mode
+	go triggerEngineLogic(true, false) // Search mode, NO AutoAdd
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "Search triggered"})
 }
@@ -186,7 +186,7 @@ func clearSuggestion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "Suggestion cleared"})
 }
 
-func triggerEngineLogic(searchOnly bool) {
+func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 	fmt.Println("Triggering Friday Night Movie Engine...")
 	cfg := config.GetConfig()
 	jClient := media.NewJellyfinClient(cfg.JellyfinURL, cfg.JellyfinKey)
@@ -218,7 +218,8 @@ func triggerEngineLogic(searchOnly bool) {
 		return
 	}
 
-	if searchOnly {
+	if !autoAdd || searchOnly {
+		// Discovery only mode (Manual roll or search)
 		movie, err := logic.DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, true)
 		if err != nil {
 			fmt.Printf("Error searching: %v\n", err)
@@ -237,6 +238,7 @@ func triggerEngineLogic(searchOnly bool) {
 			config.SaveState(state)
 		}
 	} else {
+		// Auto-add mode (Background routine)
 		movie, err := logic.RunFridayNightRoutine(cfg, jClient, tClient, rClient, provider, updateStatus)
 		if err != nil {
 			fmt.Printf("Error running routine: %v\n", err)
@@ -249,7 +251,7 @@ func triggerEngineLogic(searchOnly bool) {
 			state.LastMovieOverview = movie.Overview
 			state.LastMovieRating = movie.VoteAverage
 			state.LastMovieID = movie.ID
-			state.Status = "Movie Added!"
+			state.Status = "Movie Added to Radarr!"
 			state.IsRunning = false
 			state.IsSuggested = false
 			config.SaveState(state)

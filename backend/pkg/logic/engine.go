@@ -194,16 +194,22 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 func AddMovieToRadarr(movie *discovery.TMDBMovie, rClient *downloader.Client, updateStatus func(string, bool)) error {
 	updateStatus(fmt.Sprintf("Adding '%s' to Radarr...", movie.Title), true)
 
+	cfg := config.GetConfig()
 	year := time.Now().Year()
 	if len(movie.ReleaseDate) >= 4 {
 		fmt.Sscanf(movie.ReleaseDate[:4], "%d", &year)
+	}
+
+	qProfile := cfg.RadarrQualityProfileID
+	if qProfile == 0 {
+		qProfile = 1
 	}
 
 	addPayload := map[string]interface{}{
 		"title":            movie.Title,
 		"tmdbId":           movie.ID,
 		"year":             year,
-		"qualityProfileId": 1,
+		"qualityProfileId": qProfile,
 		"monitored":        true,
 		"rootFolderPath":   "/data/media/movies",
 		"addOptions": map[string]bool{

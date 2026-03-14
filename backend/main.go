@@ -52,6 +52,7 @@ func main() {
 		r.Get("/downloads", getDownloads)
 		r.Post("/test-llm", testLLM)
 		r.Post("/reject", rejectMovie)
+		r.Post("/clear-suggestion", clearSuggestion)
 	})
 
 	sched.ScheduleFridayNightJob(func() {
@@ -169,6 +170,20 @@ func rejectMovie(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "Movie rejected"})
+}
+
+func clearSuggestion(w http.ResponseWriter, r *http.Request) {
+	state := config.GetState()
+	state.LastMovieTitle = ""
+	state.LastMoviePosterPath = ""
+	state.LastMovieOverview = ""
+	state.LastMovieRating = 0
+	state.LastMovieID = 0
+	state.IsSuggested = false
+	config.SaveState(state)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "Suggestion cleared"})
 }
 
 func triggerEngineLogic(searchOnly bool) {

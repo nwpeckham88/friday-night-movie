@@ -35,7 +35,7 @@ type GeminiResponse struct {
 }
 
 // DiscoverMovie uses Gemini to think about the user's history and search for a great recommendation
-func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, notify func(string)) (*GeminiResponse, error) {
+func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*GeminiResponse, error) {
 	ctx := context.Background()
 
 	models := []string{"gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-2.0-flash"}
@@ -54,6 +54,11 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, 
 		rejectedContext = strings.Join(rejectedMovies, ", ")
 	}
 
+	failedContext := "None"
+	if len(failedSuggestions) > 0 {
+		failedContext = strings.Join(failedSuggestions, ", ")
+	}
+
 	if tasteProfile == "" {
 		tasteProfile = "No profile established yet. Start with broad high-quality recommendations."
 	}
@@ -66,15 +71,16 @@ Context:
 - Your current interpretation of user's taste: %s
 - The user's recently watched/archived movies: %s
 - Movies the user has REJECTED/NOT INTERESTED (STRICTLY DO NOT RECOMMEND THESE): %s
+- Movies you suggested IN THIS SESSION that were ALREADY IN LIBRARY or REJECTED (STRICTLY DO NOT RECOMMEND THESE): %s
 
 Instructions:
 1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
 2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
 3. Suggest a movie that matches the "vibe" or "quality" of their history and profile but offers something fresh.
-4. DO NOT recommend items from the provided history list or the rejected list.
+4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
 6. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
-`, dateStr, tasteProfile, historyContext, rejectedContext)
+`, dateStr, tasteProfile, historyContext, rejectedContext, failedContext)
 
 	// Configure Generation Config with Search Grounding
 	genConfig := &genai.GenerateContentConfig{

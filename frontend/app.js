@@ -207,16 +207,17 @@ async function mockLoadData() {
                 let actionButton = `<button id="trigger-btn" class="btn-primary" style="margin-top: 1rem; width: auto;" onclick="triggerJob()">Roll Again</button>`;
                 if (state.isSuggested) {
                     actionButton = `
-                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start; flex-wrap: wrap; position: relative;">
                             <button class="btn-primary" style="background: var(--success-color); box-shadow: 0 0 15px var(--success-color); width: auto;" onclick="addMovie(${state.lastMovieId})">Add to Queue</button>
                             <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.1); border: 1px solid var(--panel-border);" onclick="rejectMovie(${state.lastMovieId})">Not Interested</button>
-                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);" onclick="triggerSearch()">Try Another</button>
+                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);" onclick="triggerSearch()">Search Again</button>
+                            <button class="btn-icon" style="position: absolute; top: -110px; right: -10px; background: rgba(0,0,0,0.5); border: 1px solid var(--panel-border); color: var(--text-secondary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem;" onclick="clearSuggestion()" title="Clear Suggestion">✕</button>
                         </div>
                     `;
                 }
 
                 currentMovieArea.innerHTML = `
-                    <div class="movie-card-active fade-in" style="display: flex; gap: 2rem; align-items: flex-start; text-align: left;">
+                    <div class="movie-card-active fade-in" style="display: flex; gap: 2rem; align-items: flex-start; text-align: left; position: relative;">
                         <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}" style="width: 200px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
                         <div class="movie-info" style="flex: 1;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -388,3 +389,17 @@ async function rejectMovie(tmdbId) {
         console.error("Failed to reject movie:", e);
     }
 }
+
+async function clearSuggestion() {
+    try {
+        const res = await fetch('/api/clear-suggestion', { method: 'POST' });
+        if (res.ok) {
+            mockLoadData();
+        } else {
+            console.error('Failed to clear suggestion');
+        }
+    } catch (e) {
+        console.error("Failed to clear suggestion:", e);
+    }
+}
+

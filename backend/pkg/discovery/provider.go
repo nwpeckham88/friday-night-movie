@@ -8,7 +8,7 @@ import (
 
 // MovieDiscoverer is the interface for different LLM providers
 type MovieDiscoverer interface {
-	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, notify func(string)) (*GeminiResponse, error)
+	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*GeminiResponse, error)
 	GenerateText(prompt string) (string, error)
 }
 

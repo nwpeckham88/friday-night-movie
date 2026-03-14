@@ -160,7 +160,9 @@ func DiscoverNewMovie(
 			count++
 		}
 
-		suggestion, err := gClient.DiscoverMovie(historyStrings)
+		suggestion, err := gClient.DiscoverMovie(historyStrings, func(msg string) {
+			updateStatus(msg, true)
+		})
 		if err != nil {
 			return nil, fmt.Errorf("gemini discovery failed: %w", err)
 		}

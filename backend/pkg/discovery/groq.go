@@ -32,27 +32,41 @@ func NewGroqClient(apiKey, endpoint, model string) (*GroqClient, error) {
 	}, nil
 }
 
-func (g *GroqClient) DiscoverMovie(userHistory []string, notify func(string)) (*GeminiResponse, error) {
+func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, notify func(string)) (*GeminiResponse, error) {
 	// Expert Persona Prompt (Unified with Gemini's logic)
 	now := time.Now()
 	dateStr := now.Format("January 02, 2006")
-	historyContext := strings.Join(userHistory, ", ")
+	historyContext := "None"
+	if len(userHistory) > 0 {
+		historyContext = strings.Join(userHistory, ", ")
+	}
+
+	rejectedContext := "None"
+	if len(rejectedMovies) > 0 {
+		rejectedContext = strings.Join(rejectedMovies, ", ")
+	}
+
+	if tasteProfile == "" {
+		tasteProfile = "No profile established yet. Start with broad high-quality recommendations."
+	}
 
 	prompt := fmt.Sprintf(`You are a World-class Movie Expert and Cinema Historian.
-Your goal is to recommend ONE perfect, high-quality movie for the user.
+Your goal is to recommend ONE perfect, high-quality movie for the user based on their taste.
 
 Context:
 - Today's Date: %s
+- Your current interpretation of user's taste: %s
 - The user's recently watched/archived movies: %s
+- Movies the user has REJECTED/NOT INTERESTED (STRICTLY DO NOT RECOMMEND THESE): %s
 
 Instructions:
 1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
 2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
-3. Suggest a movie that matches the "vibe" or "quality" of their history but offers something fresh.
-4. DO NOT recommend items from the provided history list.
+3. Suggest a movie that matches the "vibe" or "quality" of their history and profile but offers something fresh.
+4. DO NOT recommend items from the provided history list or the rejected list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
 6. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
-`, dateStr, historyContext)
+`, dateStr, tasteProfile, historyContext, rejectedContext)
 
 	// Groq/OpenRouter Request (OpenAI Format)
 	payload := map[string]interface{}{
@@ -137,4 +151,52 @@ Instructions:
 	}
 
 	return nil, fmt.Errorf("groq failed after retries: %w", lastErr)
+}
+
+func (g *GroqClient) GenerateText(prompt string) (string, error) {
+	// Groq/OpenRouter Request (OpenAI Format)
+	payload := map[string]interface{}{
+		"model": g.Model,
+		"messages": []map[string]string{
+			{"role": "user", "content": prompt},
+		},
+		"temperature": 0.5,
+	}
+
+	jsonPayload, _ := json.Marshal(payload)
+	
+	req, err := http.NewRequest("POST", g.Endpoint, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+g.APIKey)
+
+	resp, err := g.HTTP.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("groq api error: %s", resp.Status)
+	}
+
+	var openAIResp struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&openAIResp); err != nil {
+		return "", err
+	}
+
+	if len(openAIResp.Choices) == 0 {
+		return "", fmt.Errorf("groq returned no choices")
+	}
+
+	return openAIResp.Choices[0].Message.Content, nil
 }

@@ -35,7 +35,7 @@ type GeminiResponse struct {
 }
 
 // DiscoverMovie uses Gemini to think about the user's history and search for a great recommendation
-func (g *GeminiClient) DiscoverMovie(userHistory []string, notify func(string)) (*GeminiResponse, error) {
+func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, notify func(string)) (*GeminiResponse, error) {
 	ctx := context.Background()
 
 	models := []string{"gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-2.0-flash"}
@@ -49,21 +49,32 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string, notify func(string)) 
 		historyContext = strings.Join(userHistory, ", ")
 	}
 
+	rejectedContext := "None"
+	if len(rejectedMovies) > 0 {
+		rejectedContext = strings.Join(rejectedMovies, ", ")
+	}
+
+	if tasteProfile == "" {
+		tasteProfile = "No profile established yet. Start with broad high-quality recommendations."
+	}
+
 	prompt := fmt.Sprintf(`You are a World-class Movie Expert and Cinema Historian.
-Your goal is to recommend ONE perfect, high-quality movie for the user.
+Your goal is to recommend ONE perfect, high-quality movie for the user based on their taste.
 
 Context:
 - Today's Date: %s
+- Your current interpretation of user's taste: %s
 - The user's recently watched/archived movies: %s
+- Movies the user has REJECTED/NOT INTERESTED (STRICTLY DO NOT RECOMMEND THESE): %s
 
 Instructions:
 1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
 2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
-3. Suggest a movie that matches the "vibe" or "quality" of their history but offers something fresh.
-4. DO NOT recommend items from the provided history list.
+3. Suggest a movie that matches the "vibe" or "quality" of their history and profile but offers something fresh.
+4. DO NOT recommend items from the provided history list or the rejected list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
 6. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
-`, dateStr, historyContext)
+`, dateStr, tasteProfile, historyContext, rejectedContext)
 
 	// Configure Generation Config with Search Grounding
 	genConfig := &genai.GenerateContentConfig{
@@ -145,4 +156,20 @@ Instructions:
 	}
 
 	return nil, fmt.Errorf("all gemini models failed or rate limited. Last error: %w", lastErr)
+}
+
+func (g *GeminiClient) GenerateText(prompt string) (string, error) {
+	ctx := context.Background()
+	model := "gemini-2.0-flash" // Use a fast model for text generation
+
+	response, err := g.Client.Models.GenerateContent(ctx, model, genai.Text(prompt), nil)
+	if err != nil {
+		return "", err
+	}
+
+	if len(response.Candidates) == 0 || len(response.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("gemini returned an empty response")
+	}
+
+	return response.Candidates[0].Content.Parts[0].Text, nil
 }

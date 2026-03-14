@@ -26,7 +26,9 @@ type AppState struct {
 	LastMovieID         int     `json:"lastMovieId"`
 	Status              string  `json:"status"`
 	IsRunning           bool    `json:"isRunning"`
-	IsSuggested         bool      `json:"isSuggested"`
+	IsSuggested         bool    `json:"isSuggested"`
+	TasteProfile        string  `json:"tasteProfile"`
+	RejectedMovies      []string `json:"rejectedMovies"`
 }
 
 // Data represents the saved JSON structure

@@ -2,7 +2,9 @@ package logic
 
 import (
 	"fmt"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/user/friday-night-movie/pkg/discovery"
@@ -30,6 +32,15 @@ func RunFridayNightRoutine(
 	return movie, nil
 }
 
+var (
+	cacheMutex    sync.RWMutex
+	jellyfinCache []media.JellyfinItem
+	radarrCache   []downloader.Movie
+	cacheTime     time.Time
+)
+
+const cacheTTL = 2 * time.Minute
+
 // DiscoverNewMovie finds a movie via Gemini but DOES NOT add it to Radarr
 func DiscoverNewMovie(
 	jClient *media.JellyfinClient,
@@ -40,23 +51,60 @@ func DiscoverNewMovie(
 ) (*discovery.TMDBMovie, error) {
 	updateStatus("Fetching existing library...", true)
 
-	// 1. Get existing movies from Jellyfin
-	jellyfinMovies, err := jClient.GetMovies("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
-	}
-	existingTitles := make(map[string]bool)
-	for _, m := range jellyfinMovies {
-		existingTitles[m.Name] = true
+	cacheMutex.RLock()
+	useCache := time.Since(cacheTime) < cacheTTL && len(jellyfinCache) > 0
+	cacheMutex.RUnlock()
+
+	var jellyfinMovies []media.JellyfinItem
+	var radarrMovies []downloader.Movie
+	var err error
+
+	if useCache {
+		cacheMutex.RLock()
+		jellyfinMovies = jellyfinCache
+		radarrMovies = radarrCache
+		cacheMutex.RUnlock()
+		fmt.Println("Using in-memory library cache")
+	} else {
+		// 1. Get existing movies from Jellyfin
+		jellyfinMovies, err = jClient.GetMovies("")
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
+		}
+
+		// 2. Get existing movies from Radarr
+		radarrMovies, err = rClient.GetMovies()
+		if err != nil {
+			fmt.Printf("Warning: Failed to fetch Radarr movies: %v\n", err)
+		}
+
+		// Update cache
+		cacheMutex.Lock()
+		jellyfinCache = jellyfinMovies
+		radarrCache = radarrMovies
+		cacheTime = time.Now()
+		cacheMutex.Unlock()
 	}
 
-	// 2. Get existing movies from Radarr
-	radarrMovies, err := rClient.GetMovies()
-	if err != nil {
-		fmt.Printf("Warning: Failed to fetch Radarr movies: %v\n", err)
+	existingTitles := make(map[string]bool)
+	existingIDs := make(map[int]bool)
+
+	for _, m := range jellyfinMovies {
+		existingTitles[m.Name] = true
+		if m.ProviderIds.Tmdb != "" {
+			var mid int
+			if _, err := fmt.Sscanf(m.ProviderIds.Tmdb, "%d", &mid); err == nil {
+				existingIDs[mid] = true
+			}
+		}
 	}
+
+	// 2. Populate lists
 	for _, m := range radarrMovies {
 		existingTitles[m.Title] = true
+		if m.TmdbId > 0 {
+			existingIDs[m.TmdbId] = true
+		}
 	}
 
 	// 3. Discovery Loop (with Retries)
@@ -70,24 +118,46 @@ func DiscoverNewMovie(
 		}
 		updateStatus("Gemini Thinking & Searching..."+retryMsg, true)
 
-		// Prepare history
+		// Prepare history (Optimized for tokens)
 		var historyStrings []string
+
+		// 1. Top Genres Summarization
+		genreCounts := make(map[string]int)
 		for _, m := range jellyfinMovies {
-			genres := strings.Join(m.Genres, "/")
-			historyStrings = append(historyStrings, fmt.Sprintf("%s (Genres: %s)", m.Name, genres))
+			for _, g := range m.Genres {
+				genreCounts[g]++
+			}
+		}
+		// Sort genres by count (simple manual sort for top 10)
+		type genreStat struct {
+			Name  string
+			Count int
+		}
+		var topGenres []genreStat
+		for name, count := range genreCounts {
+			topGenres = append(topGenres, genreStat{name, count})
+		}
+		sort.Slice(topGenres, func(i, j int) bool {
+			return topGenres[i].Count > topGenres[j].Count
+		})
+		
+		genreSummary := ""
+		for i, g := range topGenres {
+			if i >= 10 { break }
+			genreSummary += fmt.Sprintf("%s (%d), ", g.Name, g.Count)
+		}
+		if genreSummary != "" {
+			historyStrings = append(historyStrings, "User's favorite genres: "+strings.TrimSuffix(genreSummary, ", "))
 		}
 
-		for title := range existingTitles {
-			found := false
-			for _, m := range jellyfinMovies {
-				if m.Name == title {
-					found = true
-					break
-				}
-			}
-			if !found {
-				historyStrings = append(historyStrings, title)
-			}
+		// 2. Sliding Window: Only send the 40 most recent titles as literal examples
+		historyStrings = append(historyStrings, "Recently watched/queued movies (for style reference):")
+		limit := 40
+		count := 0
+		// Iterate backwards to get latest (assuming Jellyfin order or just taking first 40 for now)
+		for i := len(jellyfinMovies)-1; i >= 0 && count < limit; i-- {
+			historyStrings = append(historyStrings, jellyfinMovies[i].Name)
+			count++
 		}
 
 		suggestion, err := gClient.DiscoverMovie(historyStrings)
@@ -105,11 +175,12 @@ func DiscoverNewMovie(
 			return nil, fmt.Errorf("failed to sync gemini result with tmdb (%s): %w", suggestion.SearchQuery, err)
 		}
 
-		// 5. Check if it's already in our library
-		if existingTitles[movie.Title] {
+		// 5. Check if it's already in our library (Robust ID + Title check)
+		if existingIDs[movie.ID] || existingTitles[movie.Title] {
 			if attempt < maxRetries {
-				fmt.Printf("Gemini suggested duplicate '%s', retrying...\n", movie.Title)
-				existingTitles[movie.Title] = true // Ensure it stays in the "blacklist" for next retry
+				fmt.Printf("Gemini suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)
+				existingIDs[movie.ID] = true
+				existingTitles[movie.Title] = true
 				continue
 			}
 			return nil, fmt.Errorf("gemini suggested a movie we already have after %d attempts: %s", maxRetries, movie.Title)
@@ -126,11 +197,16 @@ func DiscoverNewMovie(
 func AddMovieToRadarr(movie *discovery.TMDBMovie, rClient *downloader.Client, updateStatus func(string, bool)) error {
 	updateStatus(fmt.Sprintf("Adding '%s' to Radarr...", movie.Title), true)
 
+	// Parse year from ReleaseDate (YYYY-MM-DD)
+	year := time.Now().Year()
+	if len(movie.ReleaseDate) >= 4 {
+		fmt.Sscanf(movie.ReleaseDate[:4], "%d", &year)
+	}
+
 	addPayload := map[string]interface{}{
 		"title":            movie.Title,
-		"titleSlug":        fmt.Sprintf("%d", movie.ID),
 		"tmdbId":           movie.ID,
-		"year":             time.Now().Year(), // ideally parse from ReleaseDate if possible
+		"year":             year,
 		"qualityProfileId": 1,
 		"monitored":        true,
 		"rootFolderPath":   "/movies",

@@ -154,6 +154,7 @@ func triggerEngineLogic(searchOnly bool) {
 			state.LastMoviePosterPath = ""
 			state.LastMovieOverview = ""
 			state.LastMovieRating = 0
+			state.LastMovieID = 0
 			state.IsSuggested = false
 		}
 		config.SaveState(state)
@@ -210,24 +211,19 @@ func triggerAddLogic(tmdbId int) {
 	}
 
 	updateStatus("Fetching movie details from TMDB...", true)
-	// We need the full movie details to add to Radarr properly (though logic.AddMovieToRadarr only needs TMDBMovie)
-	// SearchMovie doesn't work with ID, we need GetMovieDetails or similar.
-	// Wait, TMDBClient has a search by query. Let's assume we have the movie from state.
-	
-	state := config.GetState()
-	movie := &discovery.TMDBMovie{
-		ID:         state.LastMovieID,
-		Title:      state.LastMovieTitle,
-		PosterPath: state.LastMoviePosterPath,
-		Overview:   state.LastMovieOverview,
-		VoteAverage: state.LastMovieRating,
+	tClient := discovery.NewTMDBClient(cfg.TMDBKey)
+	movie, err := tClient.GetMovie(tmdbId)
+	if err != nil {
+		fmt.Printf("Error fetching movie from TMDB: %v\n", err)
+		updateStatus(fmt.Sprintf("TMDB Error: %v", err), false)
+		return
 	}
 
 	if err := logic.AddMovieToRadarr(movie, rClient, updateStatus); err != nil {
 		fmt.Printf("Error adding manually: %v\n", err)
 		updateStatus(fmt.Sprintf("Error: %v", err), false)
 	} else {
-		state = config.GetState()
+		state := config.GetState()
 		state.Status = "Movie Added!"
 		state.IsRunning = false
 		state.IsSuggested = false

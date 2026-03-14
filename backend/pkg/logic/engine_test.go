@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/user/friday-night-movie/pkg/config"
 	"github.com/user/friday-night-movie/pkg/discovery"
 	"github.com/user/friday-night-movie/pkg/downloader"
 	"github.com/user/friday-night-movie/pkg/media"
@@ -59,13 +60,20 @@ func TestRunFridayNightRoutine(t *testing.T) {
 	// Create a dummy Gemini client (API key can be fake since we aren't actually running full integration tests for Gemini yet in this unit test without a mock server or real key)
 	// For a real setup, we would mock the genai server responses, but since it's an external SDK, we'd need a wrapper interface.
 	// For this test, let's just initialize it so it compiles, but we might get an error if it actually tries to hit the API.
-	t.Skip("Skipping engine test because Gemini genai SDK requires a real API key to establish a connection")
+	cfg := config.AppConfig{
+		JellyfinURL: jServer.URL,
+		JellyfinKey: "fake-key",
+		RadarrURL:   rServer.URL,
+		RadarrKey:   "fake-key",
+		TMDBKey:     "fake-key",
+	}
+
 	gClient, _ := discovery.NewGeminiClient("fake-key")
-	
+
 	rClient := downloader.NewClient(rServer.URL, "fake-key")
 
 	// Run logic
-	movie, err := RunFridayNightRoutine(jClient, tClient, gClient, rClient, func(s string, b bool) {})
+	movie, err := RunFridayNightRoutine(cfg, jClient, tClient, rClient, gClient, func(s string, b bool) {})
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

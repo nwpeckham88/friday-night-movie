@@ -22,8 +22,10 @@ type AppState struct {
 	LastMoviePosterPath string  `json:"lastMoviePosterPath"`
 	LastMovieOverview   string  `json:"lastMovieOverview"`
 	LastMovieRating     float64 `json:"lastMovieRating"`
+	LastMovieID         int     `json:"lastMovieId"`
 	Status              string  `json:"status"`
 	IsRunning           bool    `json:"isRunning"`
+	IsSuggested         bool    `json:"isSuggested"`
 }
 
 // Data represents the saved JSON structure

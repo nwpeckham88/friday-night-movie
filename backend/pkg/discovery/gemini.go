@@ -62,7 +62,8 @@ Instructions:
 2. Consider the current date/season.
 3. Use Google Search to find highly-rated trending movies or hidden gems that match this profile.
 4. DO NOT recommend a movie they have already watched.
-6. You MUST return ONLY a JSON object containing the movie's title, release year, and a TMDB search query (e.g., the title and year). Do not include markdown formatting or any other text.
+5. STRICTLY NO TV SHOWS, SERIES, OR DOCUMENTARIES. ONLY FEATURE-LENGTH MOVIES.
+6. You MUST return ONLY a JSON object containing the movie's title, release year, and a search query (e.g., the title and year). Do not include markdown formatting or any other text.
 Format: {"title": "Movie Title", "year": 2024, "search_query": "Movie Title 2024"}
 `, dateStr, historyContext)
 

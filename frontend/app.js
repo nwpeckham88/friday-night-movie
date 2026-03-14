@@ -107,6 +107,7 @@ async function mockLoadData() {
             // Update Engine Status UI
             const statusEl = document.getElementById('engine-status');
             const triggerBtn = document.getElementById('trigger-btn');
+            const searchBtn = document.getElementById('search-btn');
             
             if (statusEl) {
                 statusEl.innerText = state.status || "";
@@ -118,6 +119,10 @@ async function mockLoadData() {
                     triggerBtn.style.opacity = '0.5';
                     triggerBtn.innerText = 'Searching...';
                 }
+                if (searchBtn) {
+                    searchBtn.disabled = true;
+                    searchBtn.style.opacity = '0.5';
+                }
                 // Poll for updates every 2 seconds if running
                 if (!window.statusInterval) {
                     window.statusInterval = setInterval(mockLoadData, 2000);
@@ -128,6 +133,10 @@ async function mockLoadData() {
                     triggerBtn.style.opacity = '1';
                     triggerBtn.innerHTML = '<span>🎲</span> I\'m feeling lucky';
                 }
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.style.opacity = '1';
+                }
                 if (window.statusInterval) {
                     clearInterval(window.statusInterval);
                     window.statusInterval = null;
@@ -136,17 +145,31 @@ async function mockLoadData() {
 
             if (state && state.lastMovieTitle) {
                 const posterUrl = state.lastMoviePosterPath ? `https://image.tmdb.org/t/p/w500${state.lastMoviePosterPath}` : 'https://via.placeholder.com/200x300?text=No+Poster';
+                
+                let actionButton = `<button id="trigger-btn" class="btn-primary" style="margin-top: 1rem; width: auto;" onclick="triggerJob()">Roll Again</button>`;
+                if (state.isSuggested) {
+                    actionButton = `
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start; flex-wrap: wrap;">
+                            <button class="btn-primary" style="background: var(--success-color); box-shadow: 0 0 15px var(--success-color); width: auto;" onclick="addMovie(${state.lastMovieId})">Add to Queue</button>
+                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.1);" onclick="triggerSearch()">Try Another Suggestion</button>
+                        </div>
+                    `;
+                }
+
                 currentMovieArea.innerHTML = `
-                    <div class="movie-card-active fade-in">
-                        <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}">
-                        <div class="movie-info">
-                            <h3 style="color: var(--text-primary); font-size: 1.5rem;">${state.lastMovieTitle}</h3>
-                            <p>${state.lastMovieOverview}</p>
-                            <div class="movie-meta">
-                                <span>⭐ ${state.lastMovieRating}/10</span>
+                    <div class="movie-card-active fade-in" style="display: flex; gap: 2rem; align-items: flex-start; text-align: left;">
+                        <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}" style="width: 200px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                        <div class="movie-info" style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h3 style="color: var(--text-primary); font-size: 1.8rem; margin: 0;">${state.lastMovieTitle}</h3>
+                                ${state.isSuggested ? '<span style="background: var(--accent-color); color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">SUGGESTION</span>' : ''}
                             </div>
-                            <button id="trigger-btn" class="btn-primary" style="margin-top: 1rem; width: auto;" onclick="triggerJob()">Roll Again</button>
-                            <div id="engine-status" style="margin-top: 1rem; color: var(--accent-color); font-weight: 600;">${state.status || ""}</div>
+                            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">${state.lastMovieOverview}</p>
+                            <div class="movie-meta">
+                                <span style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color);">⭐ ${state.lastMovieRating}/10</span>
+                            </div>
+                            ${actionButton}
+                            <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600;">${state.status || ""}</div>
                         </div>
                     </div>
                 `;
@@ -222,21 +245,19 @@ async function showDefaultMovie(container) {
             <div style="text-align: center; padding: 2rem;" class="fade-in">
                 <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Next Selection: ${data.nextRun}</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
-                <button class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
-                    <span>🎲</span> I'm feeling lucky
-                </button>
+                <div class="button-group" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <span>🎲</span> I'm feeling lucky
+                    </button>
+                    <button id="search-btn" class="btn-secondary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="triggerSearch()">
+                        <span>🔍</span> Search for Suggestion
+                    </button>
+                </div>
+                <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;"></div>
             </div>
         `;
     } catch (e) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 2rem;" class="fade-in">
-                <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Next Selection: Friday at 6:00 PM</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
-                <button class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
-                    <span>🎲</span> I'm feeling lucky
-                </button>
-            </div>
-        `;
+        // Fallback already handled or not critical
     }
 }
 
@@ -244,7 +265,6 @@ async function triggerJob() {
     try {
         const res = await fetch('/api/trigger', { method: 'POST' });
         if (res.ok) {
-            // Start polling for status
             mockLoadData();
         } else {
             const data = await res.json();
@@ -252,6 +272,37 @@ async function triggerJob() {
         }
     } catch (e) {
         console.error("Failed to trigger job:", e);
-        alert('Failed to trigger the movie engine.');
+    }
+}
+
+async function triggerSearch() {
+    try {
+        const res = await fetch('/api/search', { method: 'POST' });
+        if (res.ok) {
+            mockLoadData();
+        } else {
+            const data = await res.json();
+            alert('Failed: ' + (data.status || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error("Failed to trigger search:", e);
+    }
+}
+
+async function addMovie(tmdbId) {
+    try {
+        const res = await fetch('/api/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tmdbId: tmdbId })
+        });
+        if (res.ok) {
+            mockLoadData();
+        } else {
+            const data = await res.json();
+            alert('Failed to add movie: ' + (data.status || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error("Failed to add movie:", e);
     }
 }

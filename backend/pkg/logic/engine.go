@@ -10,8 +10,28 @@ import (
 	"github.com/user/friday-night-movie/pkg/media"
 )
 
-// RunFridayNightRoutine orchestrates finding a new movie and sending it to Radarr
+// RunFridayNightRoutine orchestrates finding a new movie and sending it to Radarr (Auto-add)
 func RunFridayNightRoutine(
+	jClient *media.JellyfinClient,
+	tClient *discovery.TMDBClient,
+	gClient *discovery.GeminiClient,
+	rClient *downloader.Client,
+	updateStatus func(string, bool),
+) (*discovery.TMDBMovie, error) {
+	movie, err := DiscoverNewMovie(jClient, tClient, gClient, rClient, updateStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := AddMovieToRadarr(movie, rClient, updateStatus); err != nil {
+		return nil, err
+	}
+
+	return movie, nil
+}
+
+// DiscoverNewMovie finds a movie via Gemini but DOES NOT add it to Radarr
+func DiscoverNewMovie(
 	jClient *media.JellyfinClient,
 	tClient *discovery.TMDBClient,
 	gClient *discovery.GeminiClient,
@@ -99,13 +119,18 @@ func RunFridayNightRoutine(
 		break
 	}
 
-	updateStatus(fmt.Sprintf("Adding '%s' to Radarr...", selectedMovie.Title), true)
+	return selectedMovie, nil
+}
+
+// AddMovieToRadarr adds a resolved TMDB movie to Radarr
+func AddMovieToRadarr(movie *discovery.TMDBMovie, rClient *downloader.Client, updateStatus func(string, bool)) error {
+	updateStatus(fmt.Sprintf("Adding '%s' to Radarr...", movie.Title), true)
 
 	addPayload := map[string]interface{}{
-		"title":            selectedMovie.Title,
-		"titleSlug":        fmt.Sprintf("%d", selectedMovie.ID),
-		"tmdbId":           selectedMovie.ID,
-		"year":             time.Now().Year(),
+		"title":            movie.Title,
+		"titleSlug":        fmt.Sprintf("%d", movie.ID),
+		"tmdbId":           movie.ID,
+		"year":             time.Now().Year(), // ideally parse from ReleaseDate if possible
 		"qualityProfileId": 1,
 		"monitored":        true,
 		"rootFolderPath":   "/movies",
@@ -115,9 +140,9 @@ func RunFridayNightRoutine(
 	}
 
 	if err := rClient.AddMovie(addPayload); err != nil {
-		return nil, fmt.Errorf("failed to add movie to radarr: %w", err)
+		return fmt.Errorf("failed to add movie to radarr: %w", err)
 	}
 
 	updateStatus("Successfully added to queue!", false)
-	return selectedMovie, nil
+	return nil
 }

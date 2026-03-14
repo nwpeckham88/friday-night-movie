@@ -25,9 +25,14 @@
                     <div style="text-align: center; padding: 2rem;">
                         <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Loading schedule...</h3>
                         <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
-                        <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto;">
-                            <span>Roll the Dice:</span> I'm feeling lucky
-                        </button>
+                        <div class="button-group" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                <span>🎲</span> I'm feeling lucky
+                            </button>
+                            <button id="search-btn" class="btn-secondary" onclick="triggerSearch()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                                <span>🔍</span> Search for Suggestion
+                            </button>
+                        </div>
                         <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;"></div>
                     </div>
                 </div>

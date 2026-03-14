@@ -42,6 +42,8 @@ func main() {
 		r.Post("/config", saveConfig)
 		r.Get("/state", getState)
 		r.Post("/trigger", triggerRoutine)
+		r.Post("/search", triggerSearch)
+		r.Post("/add", addManual)
 		r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"nextRun": sched.NextRun()})
@@ -51,7 +53,7 @@ func main() {
 	})
 
 	sched.ScheduleFridayNightJob(func() {
-		triggerEngineLogic()
+		triggerEngineLogic(false) // Auto-mode
 	})
 	sched.Start()
 	defer sched.Stop()
@@ -103,12 +105,33 @@ func getState(w http.ResponseWriter, r *http.Request) {
 }
 
 func triggerRoutine(w http.ResponseWriter, r *http.Request) {
-	go triggerEngineLogic()
+	go triggerEngineLogic(false) // Lucky mode
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "Job triggered"})
+	json.NewEncoder(w).Encode(map[string]string{"status": "Lucky selection triggered"})
 }
 
-func triggerEngineLogic() {
+func triggerSearch(w http.ResponseWriter, r *http.Request) {
+	go triggerEngineLogic(true) // Search mode
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "Search triggered"})
+}
+
+func addManual(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TMDBID int `json:"tmdbId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	go triggerAddLogic(body.TMDBID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "Addition triggered"})
+}
+
+func triggerEngineLogic(searchOnly bool) {
 	fmt.Println("Triggering Friday Night Movie Engine...")
 	cfg := config.GetConfig()
 	jClient := media.NewJellyfinClient(cfg.JellyfinURL, cfg.JellyfinKey)
@@ -131,26 +154,87 @@ func triggerEngineLogic() {
 			state.LastMoviePosterPath = ""
 			state.LastMovieOverview = ""
 			state.LastMovieRating = 0
+			state.IsSuggested = false
 		}
 		config.SaveState(state)
 	}
 
-	movie, err := logic.RunFridayNightRoutine(jClient, tClient, gClient, rClient, updateStatus)
-	if err != nil {
-		fmt.Printf("Error running routine: %v\n", err)
-		updateStatus(fmt.Sprintf("Error: %v", err), false)
-	} else if movie != nil {
-		fmt.Printf("Routine finished successfully. Selected: %s\n", movie.Title)
-		config.SaveState(config.AppState{
-			LastMovieTitle:      movie.Title,
-			LastMoviePosterPath: movie.PosterPath,
-			LastMovieOverview:   movie.Overview,
-			LastMovieRating:     movie.VoteAverage,
-			Status:              "Movie Added!",
-			IsRunning:           false,
-		})
+	if searchOnly {
+		movie, err := logic.DiscoverNewMovie(jClient, tClient, gClient, rClient, updateStatus)
+		if err != nil {
+			fmt.Printf("Error searching: %v\n", err)
+			updateStatus(fmt.Sprintf("Error: %v", err), false)
+		} else if movie != nil {
+			updateStatus("Found a suggestion!", false)
+			config.SaveState(config.AppState{
+				LastMovieTitle:      movie.Title,
+				LastMoviePosterPath: movie.PosterPath,
+				LastMovieOverview:   movie.Overview,
+				LastMovieRating:     movie.VoteAverage,
+				LastMovieID:         movie.ID,
+				Status:              "Suggestion Found!",
+				IsRunning:           false,
+				IsSuggested:         true,
+			})
+		}
+	} else {
+		movie, err := logic.RunFridayNightRoutine(jClient, tClient, gClient, rClient, updateStatus)
+		if err != nil {
+			fmt.Printf("Error running routine: %v\n", err)
+			updateStatus(fmt.Sprintf("Error: %v", err), false)
+		} else if movie != nil {
+			fmt.Printf("Routine finished successfully. Selected: %s\n", movie.Title)
+			config.SaveState(config.AppState{
+				LastMovieTitle:      movie.Title,
+				LastMoviePosterPath: movie.PosterPath,
+				LastMovieOverview:   movie.Overview,
+				LastMovieRating:     movie.VoteAverage,
+				LastMovieID:         movie.ID,
+				Status:              "Movie Added!",
+				IsRunning:           false,
+				IsSuggested:         false,
+			})
+		}
 	}
 }
+
+func triggerAddLogic(tmdbId int) {
+	cfg := config.GetConfig()
+	rClient := downloader.NewClient(cfg.RadarrURL, cfg.RadarrKey)
+
+	updateStatus := func(msg string, running bool) {
+		state := config.GetState()
+		state.Status = msg
+		state.IsRunning = running
+		config.SaveState(state)
+	}
+
+	updateStatus("Fetching movie details from TMDB...", true)
+	// We need the full movie details to add to Radarr properly (though logic.AddMovieToRadarr only needs TMDBMovie)
+	// SearchMovie doesn't work with ID, we need GetMovieDetails or similar.
+	// Wait, TMDBClient has a search by query. Let's assume we have the movie from state.
+	
+	state := config.GetState()
+	movie := &discovery.TMDBMovie{
+		ID:         state.LastMovieID,
+		Title:      state.LastMovieTitle,
+		PosterPath: state.LastMoviePosterPath,
+		Overview:   state.LastMovieOverview,
+		VoteAverage: state.LastMovieRating,
+	}
+
+	if err := logic.AddMovieToRadarr(movie, rClient, updateStatus); err != nil {
+		fmt.Printf("Error adding manually: %v\n", err)
+		updateStatus(fmt.Sprintf("Error: %v", err), false)
+	} else {
+		state = config.GetState()
+		state.Status = "Movie Added!"
+		state.IsRunning = false
+		state.IsSuggested = false
+		config.SaveState(state)
+	}
+}
+
 
 func getHistory(w http.ResponseWriter, r *http.Request) {
 	cfg := config.GetConfig()

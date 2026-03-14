@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -64,32 +63,10 @@ func (t *TMDBClient) DiscoverMovies(params string) ([]TMDBMovie, error) {
 	return result.Results, nil
 }
 // SearchMovie resolves a literal string title into a TMDBMovie
-func (t *TMDBClient) SearchMovie(query string) (*TMDBMovie, error) {
-	movie, err := t.executeSearch(query)
-	if err == nil && movie != nil {
-		return movie, nil
-	}
-
-	// Fallback: If query contains a year at the end, try stripping it
-	// LLMs often provide "Title (Year)" or "Title Year"
-	parts := strings.Fields(query)
-	if len(parts) > 1 {
-		lastPart := parts[len(parts)-1]
-		// Check if lastPart is a year (4 digits)
-		if len(lastPart) == 4 || (len(lastPart) == 6 && strings.HasPrefix(lastPart, "(") && strings.HasSuffix(lastPart, ")")) {
-			fallbackQuery := strings.Join(parts[:len(parts)-1], " ")
-			fmt.Printf("TMDB: Search for '%s' failed, trying fallback: '%s'\n", query, fallbackQuery)
-			return t.executeSearch(fallbackQuery)
-		}
-	}
-
-	return nil, fmt.Errorf("no movie found on TMDB for query: %s", query)
-}
-
-func (t *TMDBClient) executeSearch(query string) (*TMDBMovie, error) {
+func (t *TMDBClient) SearchMovie(title string, year int) (*TMDBMovie, error) {
 	params := url.Values{}
 	params.Add("api_key", t.APIKey)
-	params.Add("query", query)
+	params.Add("query", title)
 	params.Add("include_adult", "false")
 
 	searchURL := fmt.Sprintf("%s/3/search/movie?%s", t.BaseURL, params.Encode())
@@ -115,9 +92,33 @@ func (t *TMDBClient) executeSearch(query string) (*TMDBMovie, error) {
 	}
 
 	if len(result.Results) == 0 {
-		return nil, fmt.Errorf("no results")
+		return nil, fmt.Errorf("no results found on TMDB for: %s", title)
 	}
 
+	// Iterate through top results to find the correct year
+	// We check the first 5 results for a year match
+	limit := 5
+	if len(result.Results) < limit {
+		limit = len(result.Results)
+	}
+
+	// 1. First, search for exactly the title
+	for i := 0; i < limit; i++ {
+		m := result.Results[i]
+		if year > 0 && len(m.ReleaseDate) >= 4 {
+			var rYear int
+			fmt.Sscanf(m.ReleaseDate[:4], "%d", &rYear)
+			if rYear == year {
+				return &m, nil
+			}
+		} else if year == 0 {
+			// If no year provided, take the first one
+			return &m, nil
+		}
+	}
+
+	// 2. If no year match, fallback to the first result as a best-effort
+	fmt.Printf("TMDB: Could not find exact year match for '%s' (%d), falling back to first result: '%s' (%s)\n", title, year, result.Results[0].Title, result.Results[0].ReleaseDate)
 	return &result.Results[0], nil
 }
 

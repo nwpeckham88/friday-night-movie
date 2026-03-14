@@ -167,8 +167,8 @@ func DiscoverNewMovie(
 			return nil, fmt.Errorf("gemini discovery failed: %w", err)
 		}
 
-		updateStatus(fmt.Sprintf("Resolving '%s' on TMDB...", suggestion.Title), true)
-		movie, err := tClient.SearchMovie(suggestion.SearchQuery)
+		updateStatus(fmt.Sprintf("Resolving '%s' (%d) on TMDB...", suggestion.Title, suggestion.Year), true)
+		movie, err := tClient.SearchMovie(suggestion.Title, suggestion.Year)
 		if err != nil {
 			if attempt < maxRetries {
 				fmt.Printf("TMDB resolution failed, retrying... error: %v\n", err)

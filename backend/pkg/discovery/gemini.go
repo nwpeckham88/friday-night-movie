@@ -38,7 +38,7 @@ type GeminiResponse struct {
 func (g *GeminiClient) DiscoverMovie(userHistory []string, notify func(string)) (*GeminiResponse, error) {
 	ctx := context.Background()
 
-	models := []string{"gemini-3-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"}
+	models := []string{"gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"}
 
 	// Current Context
 	now := time.Now()

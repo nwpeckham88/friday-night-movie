@@ -54,6 +54,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Test LLM Button logic
+    const testBtn = document.getElementById('test-llm-btn');
+    const testResult = document.getElementById('test-result');
+
+    if (testBtn) {
+        testBtn.addEventListener('click', async () => {
+            const provider = document.getElementById('llm-provider').value;
+            const apiKey = document.getElementById('gemini-key').value;
+
+            testBtn.disabled = true;
+            testBtn.innerText = 'Testing...';
+            testResult.style.display = 'none';
+            testResult.className = '';
+
+            try {
+                const res = await fetch('/api/test-llm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider, apiKey })
+                });
+                
+                const data = await res.json();
+                testResult.style.display = 'block';
+                
+                if (res.ok && data.status === 'success') {
+                    testResult.innerHTML = `<strong>✅ Success!</strong><br>${data.message}<br>Suggested movie: <em>${data.movie}</em>`;
+                    testResult.classList.add('test-success');
+                } else {
+                    testResult.innerHTML = `<strong>❌ Connection Failed</strong><br>${data.message || 'Unknown error'}`;
+                    testResult.classList.add('test-error');
+                }
+            } catch (error) {
+                testResult.style.display = 'block';
+                testResult.innerHTML = `<strong>❌ Error</strong><br>Could not reach the backend server.`;
+                testResult.classList.add('test-error');
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerText = 'Test LLM Connection';
+            }
+        });
+    }
+
     // Load initial data
     loadConfig();
     mockLoadData();

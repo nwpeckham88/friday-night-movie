@@ -50,6 +50,7 @@ func main() {
 		})
 		r.Get("/history", getHistory)
 		r.Get("/downloads", getDownloads)
+		r.Post("/test-llm", testLLM)
 	})
 
 	sched.ScheduleFridayNightJob(func() {
@@ -270,6 +271,41 @@ func getDownloads(w http.ResponseWriter, r *http.Request) {
 	
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(queue)
+}
+
+func testLLM(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Provider string `json:"provider"`
+		APIKey   string `json:"apiKey"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	provider, err := discovery.GetProvider(body.APIKey, body.Provider)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+		return
+	}
+
+	// Simple test call with empty history
+	movie, err := provider.DiscoverMovie([]string{}, func(msg string) {})
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Successfully connected to %s!", body.Provider),
+		"movie":   movie.Title,
+	})
 }
 
 // FileServer conveniently sets up a http.FileServer handler to serve

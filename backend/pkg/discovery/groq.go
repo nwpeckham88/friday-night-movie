@@ -22,7 +22,7 @@ func NewGroqClient(apiKey, endpoint, model string) (*GroqClient, error) {
 		endpoint = "https://api.groq.com/openai/v1/chat/completions"
 	}
 	if model == "" {
-		model = "llama-3.1-70b-versatile"
+		model = "llama-3.3-70b-versatile"
 	}
 	return &GroqClient{
 		APIKey:   apiKey,

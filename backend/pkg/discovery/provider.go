@@ -56,7 +56,7 @@ func GetProvider(uiKey string, provider string) (MovieDiscoverer, error) {
 		}
 		model := os.Getenv("LLM_MODEL")
 		if model == "" {
-			model = "llama-3.1-70b-versatile"
+			model = "llama-3.3-70b-versatile"
 		}
 		
 		if key == "" {

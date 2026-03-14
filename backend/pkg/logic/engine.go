@@ -92,6 +92,7 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 
 	maxRetries := 2
 	var selectedMovie *discovery.TMDBMovie
+	var failedSuggestions []string
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		// Calculate history strings for LLM
@@ -134,12 +135,15 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 
 		// 4. Discover via Expert LLM
 		state := config.GetState()
-		suggestion, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, func(msg string) {
+		suggestion, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, func(msg string) {
 			updateStatus(msg, true)
 		})
 		if err != nil {
 			return nil, fmt.Errorf("expert discovery failed: %w", err)
 		}
+
+		// Remember this suggestion so we don't repeat it if validation fails
+		failedSuggestions = append(failedSuggestions, suggestion.Title)
 
 		updateStatus(fmt.Sprintf("Resolving '%s' (%d) on TMDB...", suggestion.Title, suggestion.Year), true)
 		movie, err := tClient.SearchMovie(suggestion.Title, suggestion.Year)
@@ -156,6 +160,7 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 			if !strings.EqualFold(movie.OriginalLanguage, cfg.PreferredLanguage) {
 				if attempt < maxRetries {
 					fmt.Printf("Expert suggested '%s' in language '%s', but strict mode requires '%s'. Retrying...\n", movie.Title, movie.OriginalLanguage, cfg.PreferredLanguage)
+					failedSuggestions = append(failedSuggestions, movie.Title)
 					continue
 				}
 				return nil, fmt.Errorf("expert failed to suggest a movie in %s after %d attempts", cfg.PreferredLanguage, maxRetries)
@@ -168,6 +173,7 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)
 				existingIDs[movie.ID] = true
 				existingTitles[movie.Title] = true
+				failedSuggestions = append(failedSuggestions, movie.Title)
 				continue
 			}
 			return nil, fmt.Errorf("expert suggested a movie we already have after %d attempts: %s", maxRetries, movie.Title)

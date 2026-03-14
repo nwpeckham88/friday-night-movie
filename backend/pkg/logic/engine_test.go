@@ -97,7 +97,7 @@ type MockDiscoverer struct {
 	Suggestion discovery.GeminiResponse
 }
 
-func (m *MockDiscoverer) DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, notify func(string)) (*discovery.GeminiResponse, error) {
+func (m *MockDiscoverer) DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*discovery.GeminiResponse, error) {
 	return &m.Suggestion, nil
 }
 

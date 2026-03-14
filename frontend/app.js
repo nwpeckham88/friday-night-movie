@@ -209,8 +209,11 @@ async function mockLoadData() {
                                 ${state.isSuggested ? '<span style="background: var(--accent-color); color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">SUGGESTION</span>' : ''}
                             </div>
                             <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">${state.lastMovieOverview}</p>
-                            <div class="movie-meta">
-                                <span style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color);">⭐ ${state.lastMovieRating}/10</span>
+                            <div class="movie-meta" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color);">⭐ ${Number(state.lastMovieRating).toFixed(1)}/10</span>
+                                <a href="https://www.themoviedb.org/movie/${state.lastMovieId}" target="_blank" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;" class="tmdb-link">
+                                    <span>🎬</span> View on TMDB
+                                </a>
                             </div>
                             ${actionButton}
                             <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600;">${state.status || ""}</div>

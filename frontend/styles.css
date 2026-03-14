@@ -232,3 +232,8 @@ input:focus {
 .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.1) !important;
 }
+
+.tmdb-link:hover {
+    color: var(--accent-color) !important;
+    text-decoration: underline !important;
+}

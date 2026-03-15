@@ -41,7 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
             discordWebhookUrl: document.getElementById('discord-webhook').value,
             excludedEras: document.getElementById('excluded-eras').value,
             excludedGenres: document.getElementById('excluded-genres').value,
-            suggestInLibrary: document.getElementById('suggest-in-library').checked
+            suggestInLibrary: document.getElementById('suggest-in-library').checked,
+            noteToCurator: document.getElementById('note-to-curator').value
         };
 
         // In a real app, send to backend API
@@ -134,6 +135,7 @@ async function loadConfig() {
                 { id: 'excluded-eras', val: cfg.excludedEras, env: false },
                 { id: 'excluded-genres', val: cfg.excludedGenres, env: false },
                 { id: 'suggest-in-library', val: cfg.suggestInLibrary, env: false, type: 'checkbox' },
+                { id: 'note-to-curator', val: cfg.noteToCurator, env: false },
             ];
             
             fields.forEach(f => {
@@ -484,13 +486,14 @@ async function addMovie(tmdbId) {
 }
 
 async function rejectMovie(tmdbId) {
-    if (!confirm('Are you sure you want to reject this suggestion? It will never be recommended again.')) return;
+    const reason = window.prompt('Why are you rejecting this suggestion? (e.g., "Too violent", "Seen it", "Not my mood"). Your reason will help the curator learn.');
+    if (reason === null) return; // User cancelled
     
     try {
         const res = await fetch('/api/reject', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tmdbId: tmdbId })
+            body: JSON.stringify({ tmdbId: tmdbId, reason: reason })
         });
         if (res.ok) {
             mockLoadData();

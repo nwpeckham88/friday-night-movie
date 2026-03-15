@@ -186,7 +186,16 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 
 		// 5. Discover via Expert LLM
 		updateStatus("AGENT IS THINKING...", true)
-		suggestions, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, weeklyContext, func(msg string) {
+		
+		// Fetch last 5 path themes for trajectory awareness
+		pathHistory := []string{}
+		for _, ps := range pastSuggestions {
+			if ps.PathTheme != "" && len(pathHistory) < 5 {
+				pathHistory = append(pathHistory, ps.PathTheme)
+			}
+		}
+
+		suggestions, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, weeklyContext, pathHistory, cfg.NoteToCurator, func(msg string) {
 			updateStatus("PROCESS: "+msg, true)
 		})
 		if err != nil {

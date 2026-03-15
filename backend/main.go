@@ -143,7 +143,8 @@ func addManual(w http.ResponseWriter, r *http.Request) {
 
 func rejectMovie(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		TMDBID int `json:"tmdbId"`
+		TMDBID int    `json:"tmdbId"`
+		Reason string `json:"reason"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -169,7 +170,11 @@ func rejectMovie(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		provider, _ := discovery.GetProvider(cfg.GeminiKey, cfg.LLMProvider)
 		if provider != nil {
-			newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{}, state.RejectedMovies, fmt.Sprintf("Rejected: %s", movie.Title))
+			latestAction := fmt.Sprintf("Rejected: %s", movie.Title)
+			if body.Reason != "" {
+				latestAction = fmt.Sprintf("Rejected: %s (Reason: %s)", movie.Title, body.Reason)
+			}
+			newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{}, state.RejectedMovies, latestAction)
 			if err == nil {
 				state := config.GetState()
 				state.TasteProfile = newProfile
@@ -485,7 +490,7 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Simple test call with empty history/context
-	suggestions, err := provider.DiscoverMovie([]string{}, "", []string{}, []string{}, "", func(msg string) {})
+	suggestions, err := provider.DiscoverMovie([]string{}, "", []string{}, []string{}, "", []string{}, "", func(msg string) {})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

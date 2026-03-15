@@ -28,6 +28,7 @@ type AppConfig struct {
 	ExcludedEras      string  `json:"excludedEras"`  // e.g. "1980s, 1990s"
 	ExcludedGenres    string  `json:"excludedGenres"` // e.g. "Horror, Documentary"
 	SuggestInLibrary  bool    `json:"suggestInLibrary"`
+	NoteToCurator     string  `json:"noteToCurator"`
 }
 
 // AppState represents the active state of the app
@@ -198,6 +199,7 @@ func GetFrontendConfig() map[string]interface{} {
 	res["discordWebhookUrl"] = cfg.DiscordWebhookURL
 	res["excludedEras"] = cfg.ExcludedEras
 	res["excludedGenres"] = cfg.ExcludedGenres
+	res["noteToCurator"] = cfg.NoteToCurator
 
 	return res
 }

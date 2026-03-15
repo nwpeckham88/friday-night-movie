@@ -17,7 +17,7 @@ type ExpertSuggestion struct {
 
 // MovieDiscoverer is the interface for different LLM providers
 type MovieDiscoverer interface {
-	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, weeklyContext string, notify func(string)) ([]ExpertSuggestion, error)
+	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, weeklyContext string, pathHistory []string, globalNote string, notify func(string)) ([]ExpertSuggestion, error)
 	GenerateText(prompt string) (string, error)
 }
 

@@ -70,7 +70,7 @@ func TestRunFridayNightRoutine(t *testing.T) {
 
 	// Mock Discovery Provider
 	mock := &MockDiscoverer{
-		Suggestion: discovery.GeminiResponse{
+		Suggestion: discovery.ExpertSuggestion{
 			Title: "New Awesome Movie",
 			Year:  2024,
 		},
@@ -94,11 +94,11 @@ func TestRunFridayNightRoutine(t *testing.T) {
 }
 
 type MockDiscoverer struct {
-	Suggestion discovery.GeminiResponse
+	Suggestion discovery.ExpertSuggestion
 }
 
-func (m *MockDiscoverer) DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*discovery.GeminiResponse, error) {
-	return &m.Suggestion, nil
+func (m *MockDiscoverer) DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, weeklyContext string, pathHistory []string, globalNote string, notify func(string)) ([]discovery.ExpertSuggestion, error) {
+	return []discovery.ExpertSuggestion{m.Suggestion}, nil
 }
 
 func (m *MockDiscoverer) GenerateText(prompt string) (string, error) {

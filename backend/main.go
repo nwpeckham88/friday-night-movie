@@ -18,9 +18,15 @@ import (
 	"github.com/user/friday-night-movie/pkg/logic"
 	"github.com/user/friday-night-movie/pkg/media"
 	"github.com/user/friday-night-movie/pkg/scheduler"
+	"github.com/user/friday-night-movie/pkg/db"
 )
 
 func main() {
+	if err := db.Init(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+
 	if err := config.Load(); err != nil {
 		fmt.Printf("Warning: Failed to load config: %v\n", err)
 	}

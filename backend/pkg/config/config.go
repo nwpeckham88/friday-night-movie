@@ -2,8 +2,11 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
+
+	"github.com/user/friday-night-movie/pkg/db"
 )
 
 // AppConfig represents the user settings
@@ -180,49 +183,70 @@ func GetState() AppState {
 	return memData.State
 }
 
+// Load reads from DB and performs migration if needed
+func Load() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	// 1. Try to load from DB
+	configJson, _ := db.GetSetting("config")
+	stateJson, _ := db.GetStateValue("state")
+
+	if configJson != "" && stateJson != "" {
+		_ = json.Unmarshal([]byte(configJson), &memData.Config)
+		_ = json.Unmarshal([]byte(stateJson), &memData.State)
+		fmt.Println("Loaded configuration and state from database.")
+		return nil
+	}
+
+	// 2. Migration: Check if data.json exists
+	if _, err := os.Stat(dataFile); err == nil {
+		fmt.Println("Found legacy data.json, migrating to database...")
+		b, err := os.ReadFile(dataFile)
+		if err == nil {
+			if err := json.Unmarshal(b, &memData); err == nil {
+				// Save to DB
+				configBytes, _ := json.Marshal(memData.Config)
+				stateBytes, _ := json.Marshal(memData.State)
+				db.SaveSetting("config", string(configBytes))
+				db.SaveStateValue("state", string(stateBytes))
+				fmt.Println("Migration successful.")
+				
+				// Optional: Rename legacy file to avoid re-migration
+				os.Rename(dataFile, dataFile+".bak")
+				return nil
+			}
+		}
+	}
+
+	return nil
+}
+
 func SaveConfig(cfg AppConfig) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	memData.Config = cfg
-	return writeToFile()
+	
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return db.SaveSetting("config", string(b))
 }
 
 func SaveState(state AppState) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	memData.State = state
-	return writeToFile()
-}
-
-// Load reads the JSON file into memory if it exists
-func Load() error {
-	mutex.Lock()
-	defer mutex.Unlock()
 	
-	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
-		os.MkdirAll(dataDir, 0755)
-	}
-
-	b, err := os.ReadFile(dataFile)
+	b, err := json.Marshal(state)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // OK if it doesn't exist yet
-		}
 		return err
 	}
-
-	return json.Unmarshal(b, &memData)
+	return db.SaveStateValue("state", string(b))
 }
 
+// Deprecated: writeToFile is no longer used as we use DB now.
 func writeToFile() error {
-	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
-		os.MkdirAll(dataDir, 0755)
-	}
-
-	b, err := json.MarshalIndent(memData, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(dataFile, b, 0644)
+	return nil
 }

@@ -31,6 +31,7 @@ type TMDBMovie struct {
 	VoteAverage      float64  `json:"vote_average"`
 	GenreIDs         []int    `json:"genre_ids"`
 	OriginalLanguage string   `json:"original_language"`
+	TrailerKey       string   `json:"trailer_key,omitempty"`
 }
 
 type TMDBResponse struct {
@@ -175,4 +176,37 @@ func (t *TMDBClient) GetMovie(id int) (*TMDBMovie, error) {
 	}
 
 	return &result, nil
+}
+func (t *TMDBClient) GetMovieTrailer(movieID int) (string, error) {
+	u := fmt.Sprintf("%s/3/movie/%d/videos?api_key=%s", t.BaseURL, movieID, t.APIKey)
+	
+	resp, err := t.HTTP.Get(u)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("tmdb api error: %s", resp.Status)
+	}
+
+	var result struct {
+		Results []struct {
+			Key  string `json:"key"`
+			Site string `json:"site"`
+			Type string `json:"type"`
+		} `json:"results"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+
+	for _, v := range result.Results {
+		if v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser") {
+			return v.Key, nil
+		}
+	}
+
+	return "", nil
 }

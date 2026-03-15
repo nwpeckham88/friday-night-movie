@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/user/friday-night-movie/pkg/config"
 )
 
 type GroqClient struct {
@@ -55,9 +57,15 @@ func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, re
 		tasteProfile = "No profile established yet. Start with broad high-quality recommendations."
 	}
 
-	prompt := fmt.Sprintf(`You are a World-class Movie Expert and Cinema Historian.
-Your goal is to suggest 5 VARIED movies based on the user's history and taste profile.
-These should be diverse in style, era, or genre to give the user great options.
+	cfg := config.GetConfig()
+	mood := cfg.DiscoveryMood
+	if mood == "" { mood = "Balanced" }
+	persona := cfg.DiscoveryPersona
+	if persona == "" { persona = "The Movie Expert" }
+
+	prompt := fmt.Sprintf(`You are %s.
+Your goal is to suggest 5 VARIED movies based on the user's history and taste profile, focusing on the mood: %s.
+These should be diverse in style, era, or genre to give the user great options while maintaining the requested vibe.
 
 Context:
 - Today's Date: %s
@@ -67,13 +75,17 @@ Context:
 - Movies you suggested IN THIS SESSION that were ALREADY IN LIBRARY or REJECTED (STRICTLY DO NOT RECOMMEND THESE): %s
 
 Instructions:
-1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
-2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
+1. Act according to your persona (%s). Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
+2. Respect the mood: %s.
+   - Balanced: High quality, varied, standard expert advice.
+   - Popcorn: Focus on entertainment, thrillers, blockbusters, and "fun" cinema.
+   - High Art: Focus on awards, cinematography, complexity, and artistic merit.
+   - Deep Cut: Focus on obscure, under-the-radar, and highly acclaimed niche films.
 3. Provide 5 distinct suggestions.
 4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
 6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024"}]
-`, dateStr, tasteProfile, historyContext, rejectedContext, failedContext)
+`, persona, mood, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, persona, mood)
 
 	// Groq/OpenRouter Request (OpenAI Format)
 	payload := map[string]interface{}{

@@ -201,6 +201,7 @@ func endorseMovie(w http.ResponseWriter, r *http.Request) {
 	state.LastMovieOverview = ""
 	state.LastMovieRating = 0
 	state.LastMovieID = 0
+	state.LastMovieTrailerKey = ""
 	state.IsSuggested = false
 	state.Status = "Movie Endorsed!"
 	config.SaveState(state)
@@ -216,6 +217,7 @@ func clearSuggestion(w http.ResponseWriter, r *http.Request) {
 	state.LastMovieOverview = ""
 	state.LastMovieRating = 0
 	state.LastMovieID = 0
+	state.LastMovieTrailerKey = ""
 	state.IsSuggested = false
 	config.SaveState(state)
 
@@ -242,6 +244,7 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 			state.LastMovieOverview = ""
 			state.LastMovieRating = 0
 			state.LastMovieID = 0
+			state.LastMovieTrailerKey = ""
 			state.IsSuggested = false
 		}
 		config.SaveState(state)
@@ -269,6 +272,7 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 			state.LastMovieOverview = movie.Overview
 			state.LastMovieRating = movie.VoteAverage
 			state.LastMovieID = movie.ID
+			state.LastMovieTrailerKey = movie.TrailerKey
 			state.Status = "Suggestion Found!"
 			state.IsRunning = false
 			state.IsSuggested = true

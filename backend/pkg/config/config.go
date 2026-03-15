@@ -22,6 +22,8 @@ type AppConfig struct {
 	StrictLanguage    bool   `json:"strictLanguage"`
 	RadarrQualityProfileID int `json:"radarrQualityProfileId"`
 	MinRating         float64 `json:"minRating"`
+	DiscoveryMood     string  `json:"discoveryMood"`
+	DiscoveryPersona  string  `json:"discoveryPersona"`
 }
 
 // AppState represents the active state of the app
@@ -31,6 +33,7 @@ type AppState struct {
 	LastMovieOverview   string  `json:"lastMovieOverview"`
 	LastMovieRating     float64 `json:"lastMovieRating"`
 	LastMovieID         int     `json:"lastMovieId"`
+	LastMovieTrailerKey string  `json:"lastMovieTrailerKey,omitempty"`
 	Status              string  `json:"status"`
 	IsRunning           bool    `json:"isRunning"`
 	IsSuggested         bool    `json:"isSuggested"`
@@ -172,6 +175,18 @@ func GetFrontendConfig() map[string]interface{} {
 
 	if cfg.MinRating == 0 {
 		res["minRating"] = 6.5 // Default to 6.5
+	}
+
+	if cfg.DiscoveryMood == "" {
+		res["discoveryMood"] = "Balanced"
+	} else {
+		res["discoveryMood"] = cfg.DiscoveryMood
+	}
+
+	if cfg.DiscoveryPersona == "" {
+		res["discoveryPersona"] = "The Movie Expert"
+	} else {
+		res["discoveryPersona"] = cfg.DiscoveryPersona
 	}
 
 	return res

@@ -183,6 +183,17 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 
 			// Found a good one!
 			selectedMovie = movie
+			
+			// New: Fetch Trailer Key
+			trailerKey, err := tClient.GetMovieTrailer(movie.ID)
+			if err == nil && trailerKey != "" {
+				selectedMovie.TrailerKey = trailerKey
+			}
+
+			// Update persistent state immediately if it's a suggestions search
+			// (or wait for the caller to handle it) - engine.go doesn't usually save state, main.go does.
+			// However, DiscoverNewMovie is called by main.go handlers.
+			
 			break
 		}
 

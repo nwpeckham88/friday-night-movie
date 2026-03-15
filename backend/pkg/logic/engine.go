@@ -15,8 +15,8 @@ import (
 )
 
 // RunFridayNightRoutine orchestrates finding a new movie and sending it to Radarr (Auto-add)
-func RunFridayNightRoutine(cfg config.AppConfig, jClient *media.JellyfinClient, tClient *discovery.TMDBClient, rClient *downloader.Client, provider discovery.MovieDiscoverer, updateStatus func(string, bool)) (*discovery.TMDBMovie, error) {
-	movie, err := DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, false)
+func RunFridayNightRoutine(cfg config.AppConfig, jClient *media.JellyfinClient, tClient *discovery.TMDBClient, rClient *downloader.Client, provider discovery.MovieDiscoverer, updateStatus func(string, bool), userRequest string) (*discovery.TMDBMovie, error) {
+	movie, err := DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, false, userRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ var (
 const cacheTTL = 2 * time.Minute
 
 // DiscoverNewMovie orchestrates the entire discovery flow: library -> expert -> tmdb -> radarr
-func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClient *downloader.Client, tClient *discovery.TMDBClient, provider discovery.MovieDiscoverer, updateStatus func(string, bool), discoverOnly bool) (*discovery.TMDBMovie, error) {
+func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClient *downloader.Client, tClient *discovery.TMDBClient, provider discovery.MovieDiscoverer, updateStatus func(string, bool), discoverOnly bool, userRequest string) (*discovery.TMDBMovie, error) {
 	updateStatus("Fetching library & cinema history...", true)
 
 	cacheMutex.RLock()
@@ -195,7 +195,7 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 			}
 		}
 
-		suggestions, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, weeklyContext, pathHistory, cfg.NoteToCurator, func(msg string) {
+		suggestions, err := provider.DiscoverMovie(historyStrings, state.CinematicSpectrum, state.RejectedMovies, failedSuggestions, weeklyContext, pathHistory, cfg.NoteToCurator, userRequest, func(msg string) {
 			updateStatus("PROCESS: "+msg, true)
 		})
 		if err != nil {

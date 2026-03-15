@@ -31,6 +31,14 @@ type AppConfig struct {
 	NoteToCurator     string  `json:"noteToCurator"`
 }
 
+type SpectrumDimension struct {
+	Name      string  `json:"name"`
+	PoleA     string  `json:"poleA"`
+	PoleB     string  `json:"poleB"`
+	StrengthA float64 `json:"strengthA"` // 0 to 10
+	StrengthB float64 `json:"strengthB"` // 0 to 10
+}
+
 // AppState represents the active state of the app
 type AppState struct {
 	LastMovieTitle      string  `json:"lastMovieTitle"`
@@ -46,6 +54,7 @@ type AppState struct {
 	IsSuggested         bool    `json:"isSuggested"`
 	TasteProfile        string  `json:"tasteProfile"`
 	RejectedMovies      []string `json:"rejectedMovies"`
+	CinematicSpectrum   []SpectrumDimension `json:"cinematicSpectrum,omitempty"`
 }
 
 // Data represents the saved JSON structure

@@ -1,12 +1,15 @@
 package discovery
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/user/friday-night-movie/pkg/config"
 )
 
-// UpdateTasteProfile takes existing data and returns a new 1000-word interpretation of user taste
-func UpdateTasteProfile(provider MovieDiscoverer, oldProfile string, history []string, rejected []string, latestAction string) (string, error) {
+// UpdateTasteProfile takes existing data and returns a new interpretation of user taste via the Cinematic Spectrum
+func UpdateTasteProfile(provider MovieDiscoverer, currentSpectrum []config.SpectrumDimension, history []string, rejected []string, latestAction string) ([]config.SpectrumDimension, string, error) {
 	historyContext := "None"
 	if len(history) > 0 {
 		historyContext = strings.Join(history, ", ")
@@ -17,29 +20,69 @@ func UpdateTasteProfile(provider MovieDiscoverer, oldProfile string, history []s
 		rejectedContext = strings.Join(rejected, ", ")
 	}
 
+	spectrumJSON, _ := json.Marshal(currentSpectrum)
+
 	prompt := fmt.Sprintf(`You are a World-class Film Critic and Cinematic Taste Analyst.
-Your task is to update the user's "Cinematic Taste Profile" based on a new interaction.
+Your task is to update the user's "Cinematic Spectrum" based on a new interaction.
 
-Current Profile:
+The Cinematic Spectrum consists of 16 dimensions, each with two poles (A and B).
+For each dimension, you must assign a STRENGTH (0-10) to Pole A and a STRENGTH (0-10) to Pole B.
+This allows a user to enjoy both poles (e.g., StrengthA=8, StrengthB=8 means they love both Grounded and Surreal films).
+
+CURRENT SPECTRUM:
 %s
 
-User History (Watched/Archived):
-%s
-
-Recently Rejected/Not Interested:
-%s
-
-LATEST INTERACTION:
-%s
+USER CONTEXT:
+- History: %s
+- Rejected: %s
+- LATEST INTERACTION: %s
 
 INSTRUCTIONS:
-1. Synthesize all information to create a deep, insightful interpretation of the user's movie taste.
-2. DO NOT just list movies. Explain WHY they like certain things (e.g., "The user seems drawn to nihilistic neo-noirs but rejects them if the pacing is too deliberate").
-3. Incorporate the LATEST INTERACTION prominently. If they rejected a movie, what does that say about the boundaries of their taste?
-4. Keep the summary comprehensive but under 1000 words.
-5. Maintain a sophisticated, expert tone.
-6. Return ONLY the new profile text.
-`, oldProfile, historyContext, rejectedContext, latestAction)
+1. Analyze the interaction. If they loved a movie, increase the strengths of the poles that movie represents. If they rejected it, increase the strength of the OPPOSING poles or decrease the current strengths.
+2. Return a JSON object with TWO fields:
+   - "spectrum": The full list of 16 dimensions with updated strengths.
+   - "summary": A 2-paragraph subjective "interpretation" of their current state (e.g., "The user is currently in a 'Neon-Noir' phase...").
 
-	return provider.GenerateText(prompt)
+DIMENSIONS TO MAINTAIN:
+1. Pacing (Staccato vs. Legato)
+2. Visual Texture (Naturalism vs. Expressionism)
+3. Narrative Logic (Linear vs. Labyrinthine)
+4. Thematic Density (Literal vs. Subtextual)
+5. Emotional Temperature (Cynical vs. Earnest)
+6. Dialogue Style (Logorrheic vs. Laconic)
+7. Scope (Micro vs. Macro)
+8. Atmosphere (Ominous vs. Comforting)
+9. Realism (Grounded vs. Surreal)
+10. Character Agency (Active vs. Passive)
+11. Genre Relationship (Orthodox vs. Deconstructive)
+12. Sound Scape (Diegetic vs. Operatic)
+13. Intellection (Intellectual vs. Visceral)
+14. Era Anchoring (Archive vs. Contemporary)
+15. Cultural Lens (Domestic vs. World)
+16. Transgression (Safe vs. Provocative)
+
+Return ONLY JSON.
+`, string(spectrumJSON), historyContext, rejectedContext, latestAction)
+
+	resp, err := provider.GenerateText(prompt)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Simple JSON extraction
+	start := strings.Index(resp, "{")
+	end := strings.LastIndex(resp, "}")
+	if start == -1 || end == -1 {
+		return nil, "", fmt.Errorf("failed to find JSON in LLM response")
+	}
+
+	var update struct {
+		Spectrum []config.SpectrumDimension `json:"spectrum"`
+		Summary  string              `json:"summary"`
+	}
+	if err := json.Unmarshal([]byte(resp[start:end+1]), &update); err != nil {
+		return nil, "", err
+	}
+
+	return update.Spectrum, update.Summary, nil
 }

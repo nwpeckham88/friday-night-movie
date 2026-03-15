@@ -19,6 +19,34 @@ document.addEventListener('DOMContentLoaded', () => {
         viewDashboard.classList.remove('active-view');
     });
 
+    // Curator Request Logic
+    const sendRequestBtn = document.getElementById('send-request-btn');
+    const requestInput = document.getElementById('curator-request-input');
+    if (sendRequestBtn && requestInput) {
+        sendRequestBtn.addEventListener('click', async () => {
+            const prompt = requestInput.value.trim();
+            if (!prompt) return;
+
+            // Clear previous search overlay steps
+            const thinkingSteps = document.getElementById('thinking-steps');
+            if (thinkingSteps) thinkingSteps.innerHTML = '';
+
+            try {
+                const res = await fetch('/api/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                if (res.ok) {
+                    requestInput.value = '';
+                    mockLoadData(); // Start polling status
+                }
+            } catch (err) {
+                console.error("Failed to send request:", err);
+            }
+        });
+    }
+
     // Settings Form Submit
     const settingsForm = document.getElementById('settings-form');
     settingsForm.addEventListener('submit', async (e) => {
@@ -192,8 +220,6 @@ async function fetchRadarrProfiles() {
 
 async function mockLoadData() {
     const currentMovieArea = document.getElementById('current-movie');
-    const historyList = document.getElementById('history-list');
-    const suggestionsList = document.getElementById('suggestions-list');
     const downloadStatus = document.getElementById('download-status');
 
     try {
@@ -210,10 +236,16 @@ async function mockLoadData() {
                 statusEl.innerText = state.status || "";
             }
 
-            // Update Taste Profile
+            // Update Cinematic Compass (Spectrum)
+            if (state.cinematicSpectrum) {
+                renderSpectrum(state.cinematicSpectrum);
+            }
+
+            // Update Taste Interpretation
             const tasteEl = document.getElementById('taste-profile-content');
             if (tasteEl) {
-                tasteEl.innerHTML = (state.tasteProfile || "Establishing your cinematic taste... Check back after a few searches.").replace(/\n/g, '<br>');
+                const summary = state.tasteProfile || "Establishing your cinematic taste... Check back after a few searches.";
+                tasteEl.innerHTML = summary.split('\n\n').map(p => `<p style="margin-bottom: 1rem;">${p.replace(/\n/g, '<br>')}</p>`).join('');
             }
 
             if (state.isRunning) {
@@ -252,7 +284,7 @@ async function mockLoadData() {
                 if (triggerBtn) {
                     triggerBtn.disabled = false;
                     triggerBtn.style.opacity = '1';
-                    triggerBtn.innerHTML = '<span>🎲</span> I\'m feeling lucky';
+                    triggerBtn.innerHTML = '<span>🎲</span> SPIN THE DIAL';
                 }
                 if (searchBtn) {
                     searchBtn.disabled = false;
@@ -285,16 +317,19 @@ async function mockLoadData() {
                     `;
                 }
 
+                const reasoningHtml = state.lastMovieReasoning ? 
+                    state.lastMovieReasoning.split('\n\n').map(p => `<p style="margin-bottom: 1rem; font-style: italic;">"${p.trim()}"</p>`).join('') : '';
+
                 currentMovieArea.innerHTML = `
                     <div class="movie-card-active fade-in">
                         <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}">
-                        <div class="movie-info" style="flex: 1; text-align: left;">
+                        <div class="movie-info">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
+                                <div style="flex: 1;">
                                     <h3 style="margin: 0;">${state.lastMovieTitle}</h3>
                                     ${state.lastMoviePathTheme ? `<div style="font-family: var(--font-mono); color: var(--accent-color); font-size: 0.9rem; margin-top: 0.3rem;">PATH: ${state.lastMoviePathTheme.toUpperCase()}</div>` : ''}
                                 </div>
-                                ${state.isSuggested ? '<span style="font-family: var(--font-mono); background: var(--accent-color); color: black; padding: 2px 8px; font-size: 0.7rem; font-weight: bold; border-radius: 2px;">BROADCAST SIGNAL</span>' : ''}
+                                ${state.isSuggested ? '<span style="font-family: var(--font-mono); background: var(--accent-color); color: black; padding: 2px 8px; font-size: 0.7rem; font-weight: bold; border-radius: 2px; margin-left: 1rem;">BROADCAST SIGNAL</span>' : ''}
                             </div>
                             <div class="movie-meta" style="font-family: var(--font-mono); margin: 0.5rem 0; color: var(--accent-color);">
                                 <span>RATING: ${Number(state.lastMovieRating).toFixed(1)}/10</span> • 
@@ -302,9 +337,9 @@ async function mockLoadData() {
                             </div>
                             
                             ${state.lastMovieReasoning ? `
-                                <div style="background: rgba(197, 160, 89, 0.1); border-left: 3px solid var(--accent-color); padding: 1rem; margin: 1.5rem 0; font-style: italic; color: var(--paper-color); line-height: 1.6;">
-                                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-color); margin-bottom: 0.5rem; letter-spacing: 1px;">CURATOR'S NOTE:</div>
-                                    "${state.lastMovieReasoning}"
+                                <div style="background: rgba(197, 160, 89, 0.1); border-left: 3px solid var(--accent-color); padding: 1.5rem; margin: 1.5rem 0; color: var(--paper-color); line-height: 1.6;">
+                                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-color); margin-bottom: 1rem; letter-spacing: 1px; font-weight: bold;">CURATOR'S RESEARCH:</div>
+                                    ${reasoningHtml}
                                 </div>
                             ` : ''}
                             
@@ -345,48 +380,70 @@ async function mockLoadData() {
     }
 
     try {
-        const historyRes = await fetch('/api/history');
-        if (historyRes.ok) {
-            const movies = await historyRes.json();
-            if (movies && movies.length > 0) {
-                historyList.innerHTML = movies.slice(0, 5).map(m => `
-                    <li><span>${m.Name}</span> <span style="color: var(--text-secondary)">Archived</span></li>
-                `).join('');
+        const downloadRes = await fetch('/api/downloads');
+        if (downloadRes.ok) {
+            const queue = await downloadRes.json();
+            if (queue && queue.length > 0) {
+                downloadStatus.innerHTML = queue.map(q => {
+                    const percent = ((q.size - q.sizeleft) / q.size) * 100 || 0;
+                    return `
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-family: var(--font-mono); color: var(--text-secondary);">
+                            <span>REEL: ${q.title}</span>
+                            <span>${percent.toFixed(1)}%</span>
+                        </div>
+                        <div style="width: 100%; height: 10px; background: #333; border: 2px solid #555; overflow: hidden; margin-bottom: 1rem;">
+                            <div style="width: ${percent}%; height: 100%; background: #006400;"></div>
+                        </div>
+                    `;
+                }).join('');
             } else {
-                historyList.innerHTML = '<li><span>No history found.</span></li>';
+                downloadStatus.innerHTML = '<p style="font-family: var(--font-mono); color: var(--text-secondary); text-align: center;">NO ACTIVE REELS IN TRANSIT</p>';
             }
         }
     } catch (e) {
-        console.error("Failed to fetch history:", e);
+        console.error("Failed to fetch downloads:", e);
+    }
+}
+
+function renderSpectrum(spectrum) {
+    const container = document.getElementById('spectrum-container');
+    if (!container) return;
+
+    if (!spectrum || spectrum.length === 0) {
+        container.innerHTML = '<div class="loading-overlay">AWAITING EXPERT ANALYSIS...</div>';
+        return;
     }
 
-    try {
-        const suggRes = await fetch('/api/suggestions');
-        if (suggRes.ok) {
-            const suggestions = await suggRes.json();
-            if (suggestions && suggestions.length > 0) {
-                if (suggestionsList) {
-                    suggestionsList.innerHTML = suggestions.slice(0, 5).map(s => `
-                        <li style="padding: 1rem 0; border-bottom: 1px solid rgba(197, 160, 89, 0.2);">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                                    <span style="font-weight: bold; color: var(--paper-color); font-family: var(--font-heading); font-size: 1.2rem;">${s.title} (${s.year})</span>
-                                    ${s.path_theme ? `<span style="font-family: var(--font-mono); font-size: 0.6rem; color: var(--accent-color); letter-spacing: 1px;">PATH: ${s.path_theme.toUpperCase()}</span>` : ''}
-                                    ${s.reasoning ? `<p style="font-size: 0.85rem; color: #888; margin: 0.3rem 0; line-height: 1.4;">${s.reasoning.substring(0, 150)}${s.reasoning.length > 150 ? '...' : ''}</p>` : ''}
-                                    <span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.7rem;">RATING: ${s.rating.toFixed(1)}/10</span>
-                                </div>
-                                <a href="https://www.themoviedb.org/movie/${s.tmdb_id}" target="_blank" style="color: var(--accent-color); font-family: var(--font-mono); font-size: 0.7rem; text-decoration: underline;">REF_LINK</a>
-                            </div>
-                        </li>
-                    `).join('');
-                }
-            } else {
-                if (suggestionsList) suggestionsList.innerHTML = '<li><span style="color: var(--text-secondary); font-size: 0.9rem;">No expert suggestions yet.</span></li>';
-            }
-        }
-    } catch (e) {
-        console.error("Failed to fetch suggestions:", e);
-    }
+    container.innerHTML = spectrum.map(dim => {
+        const total = dim.strengthA + dim.strengthB;
+        const widthA = total > 0 ? (dim.strengthA / 20) * 100 : 0;
+        const widthB = total > 0 ? (dim.strengthB / 20) * 100 : 0;
+        
+        // Net indicator: 0 strengthA = 0%, 10 strengthA & 10 strengthB = 50%, 0 strengthB = 100%
+        // Actually, let's just use the balance of A vs B
+        const net = total > 0 ? (dim.strengthA / total) : 0.5;
+        // Net indicator position: A is left (0%), B is right (100%)
+        // So strengthA=10, strengthB=0 -> pos=0%
+        // strengthA=0, strengthB=10 -> pos=100%
+        const pos = total > 0 ? (dim.strengthB / total) * 100 : 50;
+
+        return `
+            <div class="spectrum-item">
+                <div class="spectrum-label">
+                    <span>${dim.poleA} (${dim.strengthA})</span>
+                    <span>${dim.poleB} (${dim.strengthB})</span>
+                </div>
+                <div class="spectrum-meter-container" title="${dim.name}">
+                    <div class="strength-bar-a" style="width: ${widthA}%"></div>
+                    <div style="flex: 1; background: rgba(0,0,0,0.1)"></div>
+                    <div class="strength-bar-b" style="width: ${widthB}%"></div>
+                    <div class="net-indicator" style="left: calc(${pos}% - 2px)"></div>
+                </div>
+                <!-- <div style="text-align: center; font-size: 0.6rem; font-family: var(--font-mono); color: var(--sepia-med); margin-top: 2px;">${dim.name}</div> -->
+            </div>
+        `;
+    }).join('');
+}
 
     try {
         const downloadRes = await fetch('/api/downloads');

@@ -49,31 +49,38 @@
                     <div class="knob"></div>
                     <div class="knob"></div>
                 </div>
+                <div class="panel-section">
+                    <h3>Active Persona</h3>
+                    <div id="active-persona" class="persona-text">Analyzing cinematic trajectory...</div>
+                </div>
+
+                <!-- New: Curator Request Section -->
+                <div class="panel-section">
+                    <h3>Curator Request</h3>
+                    <div class="request-input-container">
+                        <textarea id="curator-request-input" placeholder="e.g., 'A moody 90s comedy' or 'Something like Blade Runner but more optimistic'"></textarea>
+                        <button id="send-request-btn" class="action-btn secondary">SEND REQUEST</button>
+                    </div>
+                </div>
             </section>
 
-            <div class="dashboard-grid">
-                <!-- Ledger Page 1: History -->
-                <section class="glass-panel slide-up" style="animation-delay: 0.1s;">
-                    <h3><i class="fas fa-book-open"></i> ARCHIVE LOG</h3>
-                    <ul id="history-list" class="history-list">
-                        <li>Loading log entries...</li>
-                    </ul>
-                </section>
-
-                <!-- Ledger Page 2: Taste Profile -->
-                <section class="glass-panel slide-up" style="animation-delay: 0.15s;">
-                    <h3><i class="fas fa-quill-pen"></i> TASTE PROFILE</h3>
-                    <div id="taste-profile-content" class="taste-profile-text">
-                        Transcribing your cinematic preferences...
+            <div class="dashboard-grid full-width">
+                <!-- Ledger Page: Cinematic Compass -->
+                <section class="glass-panel slide-up spectrum-panel">
+                    <h3><i class="fas fa-compass"></i> CINEMATIC COMPASS</h3>
+                    <p class="spectrum-intro">A 16-dimensional mapping of your cinematic soul. Weights shift as you interact with the signal.</p>
+                    <div id="spectrum-container" class="spectrum-container">
+                        <!-- Dual-pole meters will be rendered here by app.js -->
+                        <div class="loading-overlay">CALIBRATING SPECTRAL SENSORS...</div>
                     </div>
                 </section>
 
-                <!-- Ledger Page 3: Discovery -->
-                <section class="glass-panel slide-up" style="animation-delay: 0.2s;">
-                    <h3><i class="fas fa-broadcast-tower"></i> AIRWAVE LOG</h3>
-                    <ul id="suggestions-list" class="history-list">
-                        <li>Awaiting signal...</li>
-                    </ul>
+                <!-- Ledger Page: Profile Summary -->
+                <section class="glass-panel slide-up profile-panel">
+                    <h3><i class="fas fa-quill-pen"></i> TASTE INTERPRETATION</h3>
+                    <div id="taste-profile-content" class="taste-profile-text">
+                        Transcribing your cinematic preferences...
+                    </div>
                 </section>
             </div>
 

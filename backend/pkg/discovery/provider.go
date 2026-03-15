@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/user/friday-night-movie/pkg/config"
 )
 
 // ExpertSuggestion represents a movie suggested by the LLM
@@ -17,7 +19,7 @@ type ExpertSuggestion struct {
 
 // MovieDiscoverer is the interface for different LLM providers
 type MovieDiscoverer interface {
-	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, weeklyContext string, pathHistory []string, globalNote string, notify func(string)) ([]ExpertSuggestion, error)
+	DiscoverMovie(history []string, spectrum []config.SpectrumDimension, rejectedMovies []string, failedSuggestions []string, weeklyContext string, pathHistory []string, globalNote string, userRequest string, notify func(string)) ([]ExpertSuggestion, error)
 	GenerateText(prompt string) (string, error)
 }
 

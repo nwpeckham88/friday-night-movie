@@ -149,7 +149,10 @@ nav button:hover, nav button.active {
     border: 10px solid #1a1a1a;
     border-radius: 20px;
     padding: 2rem;
-    min-height: 400px;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
     box-shadow: inset 0 0 100px rgba(0,0,0,1);
     position: relative;
     overflow: hidden;
@@ -213,11 +216,16 @@ nav button:hover, nav button.active {
 .movie-card-active {
     display: flex;
     gap: 3rem;
+    height: 100%;
+    width: 100%;
+    align-items: center;
     animation: fadeIn 1s ease;
 }
 
 .movie-poster {
-    width: 250px;
+    max-width: 30%;
+    height: auto;
+    max-height: 90%;
     aspect-ratio: 2/3;
     object-fit: contain;
     background-color: #000;
@@ -227,18 +235,39 @@ nav button:hover, nav button.active {
     filter: sepia(0.3) contrast(1.1);
 }
 
+.movie-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 1.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) rgba(0,0,0,0.3);
+}
+
 .movie-info h3 {
     font-family: var(--font-heading);
-    font-size: 3rem;
+    font-size: clamp(2rem, 4vw, 3.5rem);
     color: var(--paper-color);
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     text-transform: uppercase;
+    line-height: 1;
+}
+
+.movie-info .year {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    display: block;
 }
 
 .movie-info p {
     font-size: 1.1rem;
     color: #ccc;
-    line-height: 1.8;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
 }
 
 /* Panels - Journal/Ledger Style */
@@ -320,10 +349,139 @@ input:focus, select:focus {
 }
 
 /* Dashboard Grid */
-.dashboard-grid {
+.dashboard-grid.full-width {
     display: grid;
-    grid-template-columns: 1fr 1.5fr 1fr;
-    gap: 3rem;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 2rem;
+}
+
+/* Spectrum Visualization */
+.spectrum-panel {
+    transform: rotate(-0.5deg);
+}
+
+.spectrum-intro {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--sepia-med);
+    margin-bottom: 2rem;
+    border-bottom: 1px dashed var(--sepia-light);
+    padding-bottom: 1rem;
+}
+
+.spectrum-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.spectrum-item {
+    margin-bottom: 0.5rem;
+}
+
+.spectrum-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--sepia-dark);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+}
+
+.spectrum-meter-container {
+    height: 12px;
+    background: rgba(0,0,0,0.05);
+    border: 1px solid var(--sepia-light);
+    position: relative;
+    display: flex;
+}
+
+.strength-bar-a {
+    height: 100%;
+    background: var(--sepia-med);
+    transition: width 0.5s ease;
+}
+
+.strength-bar-b {
+    height: 100%;
+    background: var(--accent-color);
+    transition: width 0.5s ease;
+}
+
+/* Curator Request Section */
+.request-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+#curator-request-input {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #2c2c2c;
+    font-family: var(--font-mono);
+    padding: 12px;
+    min-height: 80px;
+    resize: none;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    transition: all 0.3s ease;
+}
+
+#curator-request-input:focus {
+    outline: none;
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.action-btn.secondary {
+    background: #444;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.action-btn.secondary:hover {
+    background: #222;
+}
+
+.action-btn.secondary:active {
+    transform: translateY(1px);
+}
+
+.net-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 120%;
+    background: #cc0000;
+    box-shadow: 0 0 5px rgba(204, 0, 0, 0.5);
+    z-index: 5;
+    transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.loading-overlay {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    font-family: var(--font-mono);
+    color: var(--sepia-med);
+    letter-spacing: 2px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
 }
 
 /* Animations */

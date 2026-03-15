@@ -51,6 +51,7 @@ func main() {
 		r.Post("/trigger", triggerRoutine)
 		r.Post("/search", triggerSearch)
 		r.Post("/add", addManual)
+		r.Post("/request", handleRequest)
 		r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"nextRun": sched.NextRun()})
@@ -66,7 +67,7 @@ func main() {
 	})
 
 	sched.ScheduleFridayNightJob(func() {
-		triggerEngineLogic(false, true) // Auto-mode: Lucky + AutoAdd
+		triggerEngineLogic(false, true, "") // Auto-mode: Lucky + AutoAdd
 	})
 	sched.Start()
 	defer sched.Stop()
@@ -118,15 +119,29 @@ func getState(w http.ResponseWriter, r *http.Request) {
 }
 
 func triggerRoutine(w http.ResponseWriter, r *http.Request) {
-	go triggerEngineLogic(false, false) // Lucky mode, NO AutoAdd
+	go triggerEngineLogic(false, false, "") // Lucky mode, NO AutoAdd
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "Lucky selection triggered"})
 }
 
 func triggerSearch(w http.ResponseWriter, r *http.Request) {
-	go triggerEngineLogic(true, false) // Search mode, NO AutoAdd
+	go triggerEngineLogic(true, false, "") // Search mode, NO AutoAdd
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "Search triggered"})
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Prompt string `json:"prompt"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	go triggerEngineLogic(true, false, body.Prompt) // Specific request
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "Request received"})
 }
 
 func addManual(w http.ResponseWriter, r *http.Request) {
@@ -174,10 +189,11 @@ func rejectMovie(w http.ResponseWriter, r *http.Request) {
 			if body.Reason != "" {
 				latestAction = fmt.Sprintf("Rejected: %s (Reason: %s)", movie.Title, body.Reason)
 			}
-			newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{}, state.RejectedMovies, latestAction)
+			newSpectrum, newSummary, err := discovery.UpdateTasteProfile(provider, state.CinematicSpectrum, []string{}, state.RejectedMovies, latestAction)
 			if err == nil {
 				state := config.GetState()
-				state.TasteProfile = newProfile
+				state.CinematicSpectrum = newSpectrum
+				state.TasteProfile = newSummary
 				config.SaveState(state)
 			}
 		}
@@ -196,9 +212,10 @@ func endorseMovie(w http.ResponseWriter, r *http.Request) {
 
 	provider, err := discovery.GetProvider(config.GetConfig().GeminiKey, config.GetConfig().LLMProvider)
 	if err == nil {
-		newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{state.LastMovieTitle}, state.RejectedMovies, fmt.Sprintf("User endorsed (Liked) but did not download: %s", state.LastMovieTitle))
+		newSpectrum, newSummary, err := discovery.UpdateTasteProfile(provider, state.CinematicSpectrum, []string{state.LastMovieTitle}, state.RejectedMovies, fmt.Sprintf("User endorsed (Liked) but did not download: %s", state.LastMovieTitle))
 		if err == nil {
-			state.TasteProfile = newProfile
+			state.CinematicSpectrum = newSpectrum
+			state.TasteProfile = newSummary
 		}
 	}
 
@@ -236,7 +253,7 @@ func clearSuggestion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "Suggestion cleared"})
 }
 
-func triggerEngineLogic(searchOnly bool, autoAdd bool) {
+func triggerEngineLogic(searchOnly bool, autoAdd bool, userRequest string) {
 	fmt.Println("Triggering Friday Night Movie Engine...")
 	cfg := config.GetConfig()
 	jClient := media.NewJellyfinClient(cfg.JellyfinURL, cfg.JellyfinKey)
@@ -280,7 +297,7 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 
 	if !autoAdd || searchOnly {
 		// Discovery only mode (Manual roll or search)
-		movie, err := logic.DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, true)
+		movie, err := logic.DiscoverNewMovie(cfg, jClient, rClient, tClient, provider, updateStatus, true, userRequest)
 		if err != nil {
 			fmt.Printf("Error searching: %v\n", err)
 			updateStatus(fmt.Sprintf("Error: %v", err), false)
@@ -329,7 +346,7 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 		}
 	} else {
 		// Auto-add mode (Background routine)
-		movie, err := logic.RunFridayNightRoutine(cfg, jClient, tClient, rClient, provider, updateStatus)
+		movie, err := logic.RunFridayNightRoutine(cfg, jClient, tClient, rClient, provider, updateStatus, userRequest)
 		if err != nil {
 			fmt.Printf("Error running routine: %v\n", err)
 			updateStatus(fmt.Sprintf("Error: %v", err), false)
@@ -365,10 +382,11 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 
 			// Update Taste Profile on automatic pick
 			go func() {
-				newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("Automatically selected and added: %s", movie.Title))
+				newSpectrum, newSummary, err := discovery.UpdateTasteProfile(provider, state.CinematicSpectrum, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("Automatically selected and added: %s", movie.Title))
 				if err == nil {
 					s := config.GetState()
-					s.TasteProfile = newProfile
+					s.CinematicSpectrum = newSpectrum
+					s.TasteProfile = newSummary
 					config.SaveState(s)
 				}
 			}()
@@ -410,10 +428,11 @@ func triggerAddLogic(tmdbId int) {
 		go func() {
 			provider, _ := discovery.GetProvider(cfg.GeminiKey, cfg.LLMProvider)
 			if provider != nil {
-				newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("User accepted and added suggestion: %s", movie.Title))
+				newSpectrum, newSummary, err := discovery.UpdateTasteProfile(provider, state.CinematicSpectrum, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("User accepted and added suggestion: %s", movie.Title))
 				if err == nil {
 					s := config.GetState()
-					s.TasteProfile = newProfile
+					s.CinematicSpectrum = newSpectrum
+					s.TasteProfile = newSummary
 					config.SaveState(s)
 				}
 			}
@@ -490,7 +509,7 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Simple test call with empty history/context
-	suggestions, err := provider.DiscoverMovie([]string{}, "", []string{}, []string{}, "", []string{}, "", func(msg string) {})
+	suggestions, err := provider.DiscoverMovie([]string{}, []config.SpectrumDimension{}, []string{}, []string{}, "", []string{}, "", func(msg string) {})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

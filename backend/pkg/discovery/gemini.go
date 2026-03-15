@@ -63,6 +63,8 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, 
 	if mood == "" { mood = "Balanced" }
 	persona := cfg.DiscoveryPersona
 	if persona == "" { persona = "The Movie Expert" }
+	excludedEras := cfg.ExcludedEras
+	excludedGenres := cfg.ExcludedGenres
 
 	prompt := fmt.Sprintf(`You are %s.
 Your goal is to suggest 5 VARIED movies based on the user's history and taste profile, focusing on the mood: %s.
@@ -74,6 +76,8 @@ Context:
 - The user's recently watched/archived movies: %s
 - Movies the user has REJECTED/NOT INTERESTED (STRICTLY DO NOT RECOMMEND THESE): %s
 - Movies you suggested IN THIS SESSION that were ALREADY IN LIBRARY or REJECTED (STRICTLY DO NOT RECOMMEND THESE): %s
+- EXCLUDED ERAS (STRICTLY DO NOT RECOMMEND ANY MOVIE FROM THESE ERAS/DECADES): %s
+- EXCLUDED GENRES (STRICTLY DO NOT RECOMMEND ANY MOVIE FROM THESE GENRES): %s
 
 Instructions:
 1. Act according to your persona (%s). Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
@@ -86,7 +90,7 @@ Instructions:
 4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
 6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024"}]
-`, persona, mood, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, persona, mood)
+`, persona, mood, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, excludedEras, excludedGenres, persona, mood)
 
 	// Configure Generation Config with Search Grounding
 	genConfig := &genai.GenerateContentConfig{

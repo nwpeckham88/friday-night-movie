@@ -24,6 +24,9 @@ type AppConfig struct {
 	MinRating         float64 `json:"minRating"`
 	DiscoveryMood     string  `json:"discoveryMood"`
 	DiscoveryPersona  string  `json:"discoveryPersona"`
+	DiscordWebhookURL string  `json:"discordWebhookUrl"`
+	ExcludedEras      string  `json:"excludedEras"`  // e.g. "1980s, 1990s"
+	ExcludedGenres    string  `json:"excludedGenres"` // e.g. "Horror, Documentary"
 }
 
 // AppState represents the active state of the app
@@ -188,6 +191,10 @@ func GetFrontendConfig() map[string]interface{} {
 	} else {
 		res["discoveryPersona"] = cfg.DiscoveryPersona
 	}
+
+	res["discordWebhookUrl"] = cfg.DiscordWebhookURL
+	res["excludedEras"] = cfg.ExcludedEras
+	res["excludedGenres"] = cfg.ExcludedGenres
 
 	return res
 }

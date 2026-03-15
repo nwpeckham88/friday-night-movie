@@ -19,6 +19,7 @@ import (
 	"github.com/user/friday-night-movie/pkg/media"
 	"github.com/user/friday-night-movie/pkg/scheduler"
 	"github.com/user/friday-night-movie/pkg/db"
+	"github.com/user/friday-night-movie/pkg/notify"
 )
 
 func main() {
@@ -55,6 +56,7 @@ func main() {
 			json.NewEncoder(w).Encode(map[string]string{"nextRun": sched.NextRun()})
 		})
 		r.Get("/history", getHistory)
+		r.Get("/suggestions", getSuggestions)
 		r.Get("/radarr/profiles", getRadarrProfiles)
 		r.Get("/downloads", getDownloads)
 		r.Post("/test-llm", testLLM)
@@ -232,6 +234,13 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 	tClient := discovery.NewTMDBClient(cfg.TMDBKey)
 	rClient := downloader.NewClient(cfg.RadarrURL, cfg.RadarrKey)
 
+	// Set Notifier Instance
+	if cfg.DiscordWebhookURL != "" {
+		notify.SetNotifier(&notify.DiscordNotifier{WebhookURL: cfg.DiscordWebhookURL})
+	} else {
+		notify.SetNotifier(&notify.LogNotifier{})
+	}
+
 	updateStatus := func(msg string, running bool) {
 		fmt.Printf("[Status] %s (Running: %v)\n", msg, running)
 		state := config.GetState()
@@ -277,6 +286,31 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 			state.IsRunning = false
 			state.IsSuggested = true
 			config.SaveState(state)
+
+			// Notify
+			notify.Instance.Notify("🎲 FNM Suggested a Movie!", &discovery.TMDBMovie{
+				ID:          movie.ID,
+				Title:       movie.Title,
+				Overview:    movie.Overview,
+				PosterPath:  movie.PosterPath,
+				VoteAverage: movie.VoteAverage,
+				ReleaseDate: movie.ReleaseDate,
+			})
+
+			// Save to suggestions history
+			var year int
+			if len(movie.ReleaseDate) >= 4 {
+				fmt.Sscanf(movie.ReleaseDate[:4], "%d", &year)
+			}
+			db.SaveSuggestion(db.DBSuggestion{
+				TMDBID:     movie.ID,
+				Title:      movie.Title,
+				Year:       year,
+				Overview:   movie.Overview,
+				PosterPath: movie.PosterPath,
+				Rating:     movie.VoteAverage,
+				TrailerKey: movie.TrailerKey,
+			})
 		}
 	} else {
 		// Auto-add mode (Background routine)
@@ -438,6 +472,16 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 		"message": fmt.Sprintf("Successfully connected to %s!", body.Provider),
 		"movie":   suggestions[0].Title,
 	})
+}
+
+func getSuggestions(w http.ResponseWriter, r *http.Request) {
+	suggestions, err := db.GetSuggestions()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(suggestions)
 }
 
 // FileServer conveniently sets up a http.FileServer handler to serve

@@ -37,7 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
             radarrQualityProfileId: parseInt(document.getElementById('radarr-profile').value) || 1,
             minRating: parseFloat(document.getElementById('min-rating').value) || 6.5,
             discoveryMood: document.getElementById('discovery-mood').value,
-            discoveryPersona: document.getElementById('discovery-persona').value
+            discoveryPersona: document.getElementById('discovery-persona').value,
+            discordWebhookUrl: document.getElementById('discord-webhook').value,
+            excludedEras: document.getElementById('excluded-eras').value,
+            excludedGenres: document.getElementById('excluded-genres').value
         };
 
         // In a real app, send to backend API
@@ -126,6 +129,9 @@ async function loadConfig() {
                 { id: 'min-rating', val: cfg.minRating, env: false },
                 { id: 'discovery-mood', val: cfg.discoveryMood, env: false, type: 'select' },
                 { id: 'discovery-persona', val: cfg.discoveryPersona, env: false, type: 'select' },
+                { id: 'discord-webhook', val: cfg.discordWebhookUrl, env: false },
+                { id: 'excluded-eras', val: cfg.excludedEras, env: false },
+                { id: 'excluded-genres', val: cfg.excludedGenres, env: false },
             ];
             
             fields.forEach(f => {
@@ -183,6 +189,7 @@ async function fetchRadarrProfiles() {
 async function mockLoadData() {
     const currentMovieArea = document.getElementById('current-movie');
     const historyList = document.getElementById('history-list');
+    const suggestionsList = document.getElementById('suggestions-list');
     const downloadStatus = document.getElementById('download-status');
 
     try {
@@ -318,6 +325,32 @@ async function mockLoadData() {
         }
     } catch (e) {
         console.error("Failed to fetch history:", e);
+    }
+
+    try {
+        const suggRes = await fetch('/api/suggestions');
+        if (suggRes.ok) {
+            const suggestions = await suggRes.json();
+            if (suggestions && suggestions.length > 0) {
+                if (suggestionsList) {
+                    suggestionsList.innerHTML = suggestions.slice(0, 5).map(s => `
+                        <li style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-weight: 600; color: var(--text-primary);">${s.title} (${s.year})</span>
+                                    <span style="color: var(--text-secondary); font-size: 0.75rem;">⭐ ${s.rating.toFixed(1)}/10</span>
+                                </div>
+                                <a href="https://www.themoviedb.org/movie/${s.tmdb_id}" target="_blank" style="color: var(--accent-color); font-size: 0.8rem; text-decoration: none;">View</a>
+                            </div>
+                        </li>
+                    `).join('');
+                }
+            } else {
+                if (suggestionsList) suggestionsList.innerHTML = '<li><span style="color: var(--text-secondary); font-size: 0.9rem;">No expert suggestions yet.</span></li>';
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch suggestions:", e);
     }
 
     try {

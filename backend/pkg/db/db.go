@@ -56,12 +56,14 @@ func migrate() error {
 
 	CREATE TABLE IF NOT EXISTS suggestions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		tmdb_id INTEGER,
 		title TEXT,
-		poster_path TEXT,
+		year INTEGER,
 		overview TEXT,
+		poster_path TEXT,
 		rating REAL,
-		is_suggested BOOLEAN,
-		status TEXT
+		trailer_key TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS rejected (
@@ -100,6 +102,46 @@ func GetStateValue(key string) (string, error) {
 		return "", nil
 	}
 	return value, err
+}
+
+// Suggestions methods
+type DBSuggestion struct {
+	ID          int     `json:"id"`
+	TMDBID      int     `json:"tmdb_id"`
+	Title       string  `json:"title"`
+	Year        int     `json:"year"`
+	Overview    string  `json:"overview"`
+	PosterPath  string  `json:"poster_path"`
+	Rating      float64 `json:"rating"`
+	TrailerKey  string  `json:"trailer_key"`
+	CreatedAt   string  `json:"created_at"`
+}
+
+func SaveSuggestion(s DBSuggestion) error {
+	_, err := DB.Exec(`
+		INSERT INTO suggestions (tmdb_id, title, year, overview, poster_path, rating, trailer_key)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, s.TMDBID, s.Title, s.Year, s.Overview, s.PosterPath, s.Rating, s.TrailerKey)
+	return err
+}
+
+func GetSuggestions() ([]DBSuggestion, error) {
+	rows, err := DB.Query("SELECT id, tmdb_id, title, year, overview, poster_path, rating, trailer_key, created_at FROM suggestions ORDER BY created_at DESC LIMIT 50")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suggestions []DBSuggestion
+	for rows.Next() {
+		var s DBSuggestion
+		err := rows.Scan(&s.ID, &s.TMDBID, &s.Title, &s.Year, &s.Overview, &s.PosterPath, &s.Rating, &s.TrailerKey, &s.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		suggestions = append(suggestions, s)
+	}
+	return suggestions, nil
 }
 
 func Close() {

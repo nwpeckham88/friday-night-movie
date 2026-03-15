@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
             discoveryPersona: document.getElementById('discovery-persona').value,
             discordWebhookUrl: document.getElementById('discord-webhook').value,
             excludedEras: document.getElementById('excluded-eras').value,
-            excludedGenres: document.getElementById('excluded-genres').value
+            excludedGenres: document.getElementById('excluded-genres').value,
+            suggestInLibrary: document.getElementById('suggest-in-library').checked
         };
 
         // In a real app, send to backend API
@@ -132,6 +133,7 @@ async function loadConfig() {
                 { id: 'discord-webhook', val: cfg.discordWebhookUrl, env: false },
                 { id: 'excluded-eras', val: cfg.excludedEras, env: false },
                 { id: 'excluded-genres', val: cfg.excludedGenres, env: false },
+                { id: 'suggest-in-library', val: cfg.suggestInLibrary, env: false, type: 'checkbox' },
             ];
             
             fields.forEach(f => {
@@ -226,7 +228,25 @@ async function mockLoadData() {
                 if (!window.statusInterval) {
                     window.statusInterval = setInterval(mockLoadData, 2000);
                 }
+                
+                // Agent Thinking Overlay Logic
+                const thinkingOverlay = document.getElementById('thinking-overlay');
+                const thinkingSteps = document.getElementById('thinking-steps');
+                if (thinkingOverlay && thinkingSteps) {
+                    thinkingOverlay.style.display = 'flex';
+                    if (state.status) {
+                        const newStep = document.createElement('div');
+                        newStep.innerText = state.status;
+                        // Avoid duplicates
+                        if (!thinkingSteps.innerText.includes(state.status)) {
+                            thinkingSteps.appendChild(newStep);
+                        }
+                    }
+                }
             } else {
+                const thinkingOverlay = document.getElementById('thinking-overlay');
+                if (thinkingOverlay) thinkingOverlay.style.display = 'none';
+
                 if (triggerBtn) {
                     triggerBtn.disabled = false;
                     triggerBtn.style.opacity = '1';

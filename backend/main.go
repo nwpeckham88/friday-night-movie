@@ -485,7 +485,7 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Simple test call with empty history/context
-	suggestions, err := provider.DiscoverMovie([]string{}, "", []string{}, []string{}, func(msg string) {})
+	suggestions, err := provider.DiscoverMovie([]string{}, "", []string{}, []string{}, "", func(msg string) {})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

@@ -34,7 +34,7 @@ func NewGroqClient(apiKey, endpoint, model string) (*GroqClient, error) {
 	}, nil
 }
 
-func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) ([]ExpertSuggestion, error) {
+func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, weeklyContext string, notify func(string)) ([]ExpertSuggestion, error) {
 	// Expert Persona Prompt (Unified with Gemini's logic)
 	now := time.Now()
 	dateStr := now.Format("January 02, 2006")
@@ -82,15 +82,17 @@ Context:
 - Movies you suggested IN THIS SESSION that were ALREADY IN LIBRARY or REJECTED (STRICTLY DO NOT RECOMMEND THESE): %s
 - EXCLUDED ERAS (STRICTLY DO NOT RECOMMEND ANY MOVIE FROM THESE ERAS/DECADES): %s
 - EXCLUDED GENRES (STRICTLY DO NOT RECOMMEND ANY MOVIE FROM THESE GENRES): %s
+- WEEKLY CINEMA CONTEXT (Informative research on current anniversaries/events - use if relevant): %s
 
 Instructions:
 1. Act according to your persona (%s). Draw from your deep knowledge of film history and artistic movements.
 2. Respect the mood: %s.
-3. Provide 5 distinct suggestions.
+3. If the Weekly Cinema Context mentions a significant event (anniversary, death, festival) that aligns with the user's taste, consider anchoring your Path or Suggestions to it. Note this in your Curator's Notes.
+4. Provide 5 distinct suggestions.
 4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
 6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024", "reasoning": "...", "path_theme": "PATH NAME HERE"}]
-`, persona, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, excludedEras, excludedGenres, persona, mood)
+`, persona, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, excludedEras, excludedGenres, weeklyContext, persona, mood)
 
 	// Groq/OpenRouter Request (OpenAI Format)
 	payload := map[string]interface{}{

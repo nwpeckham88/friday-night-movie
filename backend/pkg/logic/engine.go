@@ -56,6 +56,7 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 		cacheMutex.RUnlock()
 		fmt.Println("Using in-memory library cache")
 	} else {
+		updateStatus("Syncing cinematic records...", true)
 		jellyfinMovies, err = jClient.GetMovies("")
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch jellyfin movies: %w", err)
@@ -64,6 +65,22 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 		if err != nil {
 			fmt.Printf("Warning: Failed to fetch Radarr movies: %v\n", err)
 		}
+
+		// Sync to local DB for high-speed lookup
+		var items []db.DBSuggestion
+		for _, m := range jellyfinMovies {
+			mid := 0
+			if m.ProviderIds.Tmdb != "" {
+				fmt.Sscanf(m.ProviderIds.Tmdb, "%d", &mid)
+			}
+			items = append(items, db.DBSuggestion{
+				TMDBID:    mid,
+				Title:     m.Name,
+				Reasoning: strings.Join(m.Genres, ", "), // Store genres in reasoning field of library table
+			})
+		}
+		db.SyncLibrary(items)
+
 		// Update cache
 		cacheMutex.Lock()
 		jellyfinCache = jellyfinMovies
@@ -122,10 +139,17 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 	var failedSuggestions []string
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		// Calculate history strings for LLM
+		// 1. Weekly Cinema Research context
+		updateStatus("COMMUNING WITH ARCHIVES...", true)
+		today := time.Now().Format("Jan 02, 2006")
+		weeklyContext, _ := discovery.GetWeeklyCinemaContext(provider, today)
+		if weeklyContext != "" {
+			updateStatus("CINEMATIC SIGNAL IDENTIFIED...", true)
+		}
+
 		var historyStrings []string
-		
-		// 1. Genres Summary (Top 10)
+
+		// 2. Genres Summary (Top 10)
 		genreSummary := jClient.GetTopGenres(10)
 		if genreSummary != "" {
 			historyStrings = append(historyStrings, "User's favorite genres: "+strings.TrimSuffix(genreSummary, ", "))
@@ -160,11 +184,10 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 			}
 		}
 
-		// 4. Discover via Expert LLM
-		state := config.GetState()
-		updateStatus("Expert is thinking of multiple diverse options...", true)
-		suggestions, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, func(msg string) {
-			updateStatus(msg, true)
+		// 5. Discover via Expert LLM
+		updateStatus("AGENT IS THINKING...", true)
+		suggestions, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, weeklyContext, func(msg string) {
+			updateStatus("PROCESS: "+msg, true)
 		})
 		if err != nil {
 			return nil, fmt.Errorf("expert discovery failed: %w", err)
@@ -189,12 +212,22 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 			}
 
 			// 6. Check if it's already in our library
-			if existingIDs[movie.ID] || existingTitles[normalize(movie.Title)] {
-				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), skipping...\n", movie.Title, movie.ID)
-				existingIDs[movie.ID] = true
-				existingTitles[normalize(movie.Title)] = true
+			inLibrary := db.IsMovieInLibrary(movie.ID)
+			if inLibrary && !cfg.SuggestInLibrary {
+				fmt.Printf("Expert suggested '%s' (ID: %d) which is in library, skipping...\n", movie.Title, movie.ID)
 				failedSuggestions = append(failedSuggestions, movie.Title)
 				continue
+			} else if inLibrary && cfg.SuggestInLibrary {
+				updateStatus(fmt.Sprintf("RE-WATCH PATH IDENTIFIED: '%s' is in your library!", movie.Title), true)
+			}
+
+			if existingIDs[movie.ID] || existingTitles[normalize(movie.Title)] {
+				// Only skip if NOT in library or re-watch disabled
+				if !inLibrary || !cfg.SuggestInLibrary {
+					fmt.Printf("Expert suggested duplicate '%s' (ID: %d), skipping...\n", movie.Title, movie.ID)
+					failedSuggestions = append(failedSuggestions, movie.Title)
+					continue
+				}
 			}
 
 			// 7. Check Minimum Rating

@@ -25,6 +25,9 @@
             <!-- Vintage TV Cabinet -->
             <section class="hero-card fade-in">
                 <div class="tv-bezel">
+                    <div id="thinking-overlay" class="thinking-overlay" style="display: none;">
+                        <div class="terminal-text" id="thinking-steps"></div>
+                    </div>
                     <div class="movie-showcase" id="current-movie">
                         <!-- Dynamic Content (Silent Movie Vibe) -->
                         <div style="text-align: center; padding: 4rem;">
@@ -167,6 +170,12 @@
                             <div class="form-group" style="flex: 1;">
                                 <label for="excluded-genres">EXCLUDE GENRES</label>
                                 <input type="text" id="excluded-genres" placeholder="e.g. Horror">
+                            </div>
+                        </div>
+                        <div class="form-row" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <div class="form-group" style="display: flex; align-items: center; gap: 1rem;">
+                                <input type="checkbox" id="suggest-in-library" style="width: 25px; height: 25px; cursor: pointer;">
+                                <label for="suggest-in-library" style="cursor: pointer; margin-bottom: 0;">SUGGEST RE-WATCHES FOR RELEVANT EVENTS</label>
                             </div>
                         </div>
                     </div>

@@ -27,6 +27,7 @@ type AppConfig struct {
 	DiscordWebhookURL string  `json:"discordWebhookUrl"`
 	ExcludedEras      string  `json:"excludedEras"`  // e.g. "1980s, 1990s"
 	ExcludedGenres    string  `json:"excludedGenres"` // e.g. "Horror, Documentary"
+	SuggestInLibrary  bool    `json:"suggestInLibrary"`
 }
 
 // AppState represents the active state of the app

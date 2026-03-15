@@ -17,8 +17,14 @@ type ExpertSuggestion struct {
 
 // MovieDiscoverer is the interface for different LLM providers
 type MovieDiscoverer interface {
-	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) ([]ExpertSuggestion, error)
+	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, weeklyContext string, notify func(string)) ([]ExpertSuggestion, error)
 	GenerateText(prompt string) (string, error)
+}
+
+// GetWeeklyCinemaContext researches significant cinematic events for the current week
+func GetWeeklyCinemaContext(p MovieDiscoverer, date string) (string, error) {
+	prompt := fmt.Sprintf("Research and summarize major cinematic anniversaries (movies, directors, actors), notable deaths, or significant film festivals/events happening during the week of %s. Focus on historical significance and 'archival' interest. Provide a concise bulleted list of the top 5 most interesting events.", date)
+	return p.GenerateText(prompt)
 }
 
 // GetProvider returns the appropriate discovery provider based on configuration

@@ -71,6 +71,13 @@ func migrate() error {
 	CREATE TABLE IF NOT EXISTS rejected (
 		title TEXT PRIMARY KEY
 	);
+
+	CREATE TABLE IF NOT EXISTS library (
+		tmdb_id TEXT PRIMARY KEY,
+		title TEXT,
+		year INTEGER,
+		genres TEXT
+	);
 	`
 	_, err := DB.Exec(schema)
 	return err
@@ -146,6 +153,45 @@ func GetSuggestions() ([]DBSuggestion, error) {
 		suggestions = append(suggestions, s)
 	}
 	return suggestions, nil
+}
+
+// SyncLibrary overwrites the local library table with fresh items from Jellyfin
+func SyncLibrary(items []DBSuggestion) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM library")
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare("INSERT INTO library (tmdb_id, title, year, genres) VALUES (?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, item := range items {
+		_, err = stmt.Exec(fmt.Sprintf("%d", item.TMDBID), item.Title, item.Year, item.Reasoning) // Using Reasoning to store genres string for simplicity
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// IsMovieInLibrary checks if a movie exists in the synced local library
+func IsMovieInLibrary(tmdbID int) bool {
+	var exists bool
+	err := DB.QueryRow("SELECT EXISTS(SELECT 1 FROM library WHERE tmdb_id = ?)", fmt.Sprintf("%d", tmdbID)).Scan(&exists)
+	if err != nil {
+		return false
+	}
+	return exists
 }
 
 func Close() {

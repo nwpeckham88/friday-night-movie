@@ -341,6 +341,23 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 			state.IsSuggested = false
 			config.SaveState(state)
 
+			// Save to suggestions history
+			var year int
+			if len(movie.ReleaseDate) >= 4 {
+				fmt.Sscanf(movie.ReleaseDate[:4], "%d", &year)
+			}
+			db.SaveSuggestion(db.DBSuggestion{
+				TMDBID:     movie.ID,
+				Title:      movie.Title,
+				Year:       year,
+				Overview:   movie.Overview,
+				PosterPath: movie.PosterPath,
+				Rating:     movie.VoteAverage,
+				TrailerKey: movie.TrailerKey,
+				Reasoning:  movie.Reasoning,
+				PathTheme:  movie.PathTheme,
+			})
+
 			// Update Taste Profile on automatic pick
 			go func() {
 				newProfile, err := discovery.UpdateTasteProfile(provider, state.TasteProfile, []string{movie.Title}, state.RejectedMovies, fmt.Sprintf("Automatically selected and added: %s", movie.Title))

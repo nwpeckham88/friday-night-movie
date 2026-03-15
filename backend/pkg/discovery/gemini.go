@@ -67,8 +67,13 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, 
 	excludedGenres := cfg.ExcludedGenres
 
 	prompt := fmt.Sprintf(`You are %s.
-Your goal is to suggest 5 VARIED movies based on the user's history and taste profile, focusing on the mood: %s.
-These should be diverse in style, era, or genre to give the user great options while maintaining the requested vibe.
+Your goal is to perform a deep-dive "Cinematic Discovery" session.
+
+CURATION PROCESS:
+1. PHASE 1: REEL ANALYSIS - Examine the user's history and taste profile. Identify a thematic "thread" or "Cinematic Trajectory" (e.g., "The evolution of the Italian Giallo", "The loneliness of the urban samurai", "Technosocial anxiety in late 90s thriller").
+2. PHASE 2: PATH SELECTION - Choose a specific thematic PATH for this session. This PATH must have a name (e.g., "Neon Noir & Nightmares").
+3. PHASE 3: SELECTION - Suggest 5 movies that fit this PATH. These should be varied but connected by the theme.
+4. PHASE 4: CURATOR'S NOTES - For each movie, provide a detailed reasoning (The "Why") explaining its historical context, why it fits the theme, and why it specifically matches the user's taste trajectory.
 
 Context:
 - Today's Date: %s
@@ -80,17 +85,13 @@ Context:
 - EXCLUDED GENRES (STRICTLY DO NOT RECOMMEND ANY MOVIE FROM THESE GENRES): %s
 
 Instructions:
-1. Act according to your persona (%s). Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
+1. Act according to your persona (%s). Draw from your deep knowledge of film history and artistic movements.
 2. Respect the mood: %s.
-   - Balanced: High quality, varied, standard expert advice.
-   - Popcorn: Focus on entertainment, thrillers, blockbusters, and "fun" cinema.
-   - High Art: Focus on awards, cinematography, complexity, and artistic merit.
-   - Deep Cut: Focus on obscure, under-the-radar, and highly acclaimed niche films.
 3. Provide 5 distinct suggestions.
 4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
-6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024"}]
-`, persona, mood, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, excludedEras, excludedGenres, persona, mood)
+6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024", "reasoning": "...", "path_theme": "PATH NAME HERE"}]
+`, persona, dateStr, tasteProfile, historyContext, rejectedContext, failedContext, excludedEras, excludedGenres, persona, mood)
 
 	// Configure Generation Config with Search Grounding
 	genConfig := &genai.GenerateContentConfig{

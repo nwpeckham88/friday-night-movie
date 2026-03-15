@@ -268,13 +268,24 @@ async function mockLoadData() {
                         <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}">
                         <div class="movie-info" style="flex: 1; text-align: left;">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <h3 style="margin: 0;">${state.lastMovieTitle}</h3>
+                                <div>
+                                    <h3 style="margin: 0;">${state.lastMovieTitle}</h3>
+                                    ${state.lastMoviePathTheme ? `<div style="font-family: var(--font-mono); color: var(--accent-color); font-size: 0.9rem; margin-top: 0.3rem;">PATH: ${state.lastMoviePathTheme.toUpperCase()}</div>` : ''}
+                                </div>
                                 ${state.isSuggested ? '<span style="font-family: var(--font-mono); background: var(--accent-color); color: black; padding: 2px 8px; font-size: 0.7rem; font-weight: bold; border-radius: 2px;">BROADCAST SIGNAL</span>' : ''}
                             </div>
                             <div class="movie-meta" style="font-family: var(--font-mono); margin: 0.5rem 0; color: var(--accent-color);">
                                 <span>RATING: ${Number(state.lastMovieRating).toFixed(1)}/10</span> • 
                                 <a href="https://www.themoviedb.org/movie/${state.lastMovieId}" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">TMDB_REF</a>
                             </div>
+                            
+                            ${state.lastMovieReasoning ? `
+                                <div style="background: rgba(197, 160, 89, 0.1); border-left: 3px solid var(--accent-color); padding: 1rem; margin: 1.5rem 0; font-style: italic; color: var(--paper-color); line-height: 1.6;">
+                                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-color); margin-bottom: 0.5rem; letter-spacing: 1px;">CURATOR'S NOTE:</div>
+                                    "${state.lastMovieReasoning}"
+                                </div>
+                            ` : ''}
+                            
                             <p style="margin-bottom: 1.5rem; font-size: 1rem; color: #aaa;">${state.lastMovieOverview}</p>
                             
                             ${state.lastMovieTrailerKey ? `
@@ -334,13 +345,15 @@ async function mockLoadData() {
             if (suggestions && suggestions.length > 0) {
                 if (suggestionsList) {
                     suggestionsList.innerHTML = suggestions.slice(0, 5).map(s => `
-                        <li style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <li style="padding: 1rem 0; border-bottom: 1px solid rgba(197, 160, 89, 0.2);">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div style="display: flex; flex-direction: column;">
-                                    <span style="font-weight: 600; color: var(--text-primary);">${s.title} (${s.year})</span>
-                                    <span style="color: var(--text-secondary); font-size: 0.75rem;">⭐ ${s.rating.toFixed(1)}/10</span>
+                                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                    <span style="font-weight: bold; color: var(--paper-color); font-family: var(--font-heading); font-size: 1.2rem;">${s.title} (${s.year})</span>
+                                    ${s.path_theme ? `<span style="font-family: var(--font-mono); font-size: 0.6rem; color: var(--accent-color); letter-spacing: 1px;">PATH: ${s.path_theme.toUpperCase()}</span>` : ''}
+                                    ${s.reasoning ? `<p style="font-size: 0.85rem; color: #888; margin: 0.3rem 0; line-height: 1.4;">${s.reasoning.substring(0, 150)}${s.reasoning.length > 150 ? '...' : ''}</p>` : ''}
+                                    <span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.7rem;">RATING: ${s.rating.toFixed(1)}/10</span>
                                 </div>
-                                <a href="https://www.themoviedb.org/movie/${s.tmdb_id}" target="_blank" style="color: var(--accent-color); font-size: 0.8rem; text-decoration: none;">View</a>
+                                <a href="https://www.themoviedb.org/movie/${s.tmdb_id}" target="_blank" style="color: var(--accent-color); font-family: var(--font-mono); font-size: 0.7rem; text-decoration: underline;">REF_LINK</a>
                             </div>
                         </li>
                     `).join('');

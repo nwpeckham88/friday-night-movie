@@ -11,6 +11,8 @@ type ExpertSuggestion struct {
 	Title       string `json:"title"`
 	Year        int    `json:"year"`
 	SearchQuery string `json:"search_query"`
+	Reasoning   string `json:"reasoning"`
+	PathTheme   string `json:"path_theme"`
 }
 
 // MovieDiscoverer is the interface for different LLM providers

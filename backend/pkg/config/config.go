@@ -37,6 +37,8 @@ type AppState struct {
 	LastMovieRating     float64 `json:"lastMovieRating"`
 	LastMovieID         int     `json:"lastMovieId"`
 	LastMovieTrailerKey string  `json:"lastMovieTrailerKey,omitempty"`
+	LastMovieReasoning   string  `json:"lastMovieReasoning"`
+	LastMoviePathTheme   string  `json:"lastMoviePathTheme"`
 	Status              string  `json:"status"`
 	IsRunning           bool    `json:"isRunning"`
 	IsSuggested         bool    `json:"isSuggested"`

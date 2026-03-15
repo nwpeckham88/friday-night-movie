@@ -204,6 +204,8 @@ func endorseMovie(w http.ResponseWriter, r *http.Request) {
 	state.LastMovieRating = 0
 	state.LastMovieID = 0
 	state.LastMovieTrailerKey = ""
+	state.LastMovieReasoning = ""
+	state.LastMoviePathTheme = ""
 	state.IsSuggested = false
 	state.Status = "Movie Endorsed!"
 	config.SaveState(state)
@@ -220,6 +222,8 @@ func clearSuggestion(w http.ResponseWriter, r *http.Request) {
 	state.LastMovieRating = 0
 	state.LastMovieID = 0
 	state.LastMovieTrailerKey = ""
+	state.LastMovieReasoning = ""
+	state.LastMoviePathTheme = ""
 	state.IsSuggested = false
 	config.SaveState(state)
 
@@ -254,6 +258,8 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 			state.LastMovieRating = 0
 			state.LastMovieID = 0
 			state.LastMovieTrailerKey = ""
+			state.LastMovieReasoning = ""
+			state.LastMoviePathTheme = ""
 			state.IsSuggested = false
 		}
 		config.SaveState(state)
@@ -282,6 +288,8 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 			state.LastMovieRating = movie.VoteAverage
 			state.LastMovieID = movie.ID
 			state.LastMovieTrailerKey = movie.TrailerKey
+			state.LastMovieReasoning = movie.Reasoning
+			state.LastMoviePathTheme = movie.PathTheme
 			state.Status = "Suggestion Found!"
 			state.IsRunning = false
 			state.IsSuggested = true
@@ -310,6 +318,8 @@ func triggerEngineLogic(searchOnly bool, autoAdd bool) {
 				PosterPath: movie.PosterPath,
 				Rating:     movie.VoteAverage,
 				TrailerKey: movie.TrailerKey,
+				Reasoning:  movie.Reasoning,
+				PathTheme:  movie.PathTheme,
 			})
 		}
 	} else {

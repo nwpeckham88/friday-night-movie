@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/user/friday-night-movie/pkg/config"
+	"github.com/user/friday-night-movie/pkg/db"
 	"github.com/user/friday-night-movie/pkg/discovery"
 	"github.com/user/friday-night-movie/pkg/downloader"
 	"github.com/user/friday-night-movie/pkg/media"
@@ -92,6 +93,28 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 		if m.TmdbId > 0 {
 			existingIDs[m.TmdbId] = true
 		}
+	}
+
+	// NEW: Add rejected movies to existing lists
+	state := config.GetState()
+	for _, r := range state.RejectedMovies {
+		// rejected format is usually "Title (ID)"
+		existingTitles[normalize(r)] = true
+		if idx := strings.LastIndex(r, "("); idx != -1 {
+			titlePart := normalize(r[:idx])
+			existingTitles[titlePart] = true
+			var rid int
+			if _, err := fmt.Sscanf(r[idx+1:], "%d", &rid); err == nil {
+				existingIDs[rid] = true
+			}
+		}
+	}
+
+	// NEW: Add past suggestions to existing lists to prevent repetition
+	pastSuggestions, _ := db.GetSuggestions()
+	for _, ps := range pastSuggestions {
+		existingIDs[ps.TMDBID] = true
+		existingTitles[normalize(ps.Title)] = true
 	}
 
 	maxRetries := 2
@@ -183,12 +206,19 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 
 			// Found a good one!
 			selectedMovie = movie
+			selectedMovie.Reasoning = suggestion.Reasoning
+			selectedMovie.PathTheme = suggestion.PathTheme
 			
 			// New: Fetch Trailer Key
 			trailerKey, err := tClient.GetMovieTrailer(movie.ID)
 			if err == nil && trailerKey != "" {
 				selectedMovie.TrailerKey = trailerKey
 			}
+
+			// Capture reasoning and path theme from suggestion
+			// We can't directly add these to discovery.TMDBMovie as it's a TMDB struct,
+			// but we can return them or handle them in main.go
+			// Actually, let's keep selectedMovie as is, but we'll need to pass reasoning back.
 
 			// Update persistent state immediately if it's a suggestions search
 			// (or wait for the caller to handle it) - engine.go doesn't usually save state, main.go does.

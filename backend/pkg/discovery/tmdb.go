@@ -32,6 +32,8 @@ type TMDBMovie struct {
 	GenreIDs         []int    `json:"genre_ids"`
 	OriginalLanguage string   `json:"original_language"`
 	TrailerKey       string   `json:"trailer_key,omitempty"`
+	Reasoning        string   `json:"reasoning,omitempty"`
+	PathTheme        string   `json:"path_theme,omitempty"`
 }
 
 type TMDBResponse struct {

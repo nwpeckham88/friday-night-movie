@@ -63,6 +63,8 @@ func migrate() error {
 		poster_path TEXT,
 		rating REAL,
 		trailer_key TEXT,
+		reasoning TEXT,
+		path_theme TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
@@ -114,19 +116,21 @@ type DBSuggestion struct {
 	PosterPath  string  `json:"poster_path"`
 	Rating      float64 `json:"rating"`
 	TrailerKey  string  `json:"trailer_key"`
+	Reasoning   string  `json:"reasoning"`
+	PathTheme   string  `json:"path_theme"`
 	CreatedAt   string  `json:"created_at"`
 }
 
 func SaveSuggestion(s DBSuggestion) error {
 	_, err := DB.Exec(`
-		INSERT INTO suggestions (tmdb_id, title, year, overview, poster_path, rating, trailer_key)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, s.TMDBID, s.Title, s.Year, s.Overview, s.PosterPath, s.Rating, s.TrailerKey)
+		INSERT INTO suggestions (tmdb_id, title, year, overview, poster_path, rating, trailer_key, reasoning, path_theme)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, s.TMDBID, s.Title, s.Year, s.Overview, s.PosterPath, s.Rating, s.TrailerKey, s.Reasoning, s.PathTheme)
 	return err
 }
 
 func GetSuggestions() ([]DBSuggestion, error) {
-	rows, err := DB.Query("SELECT id, tmdb_id, title, year, overview, poster_path, rating, trailer_key, created_at FROM suggestions ORDER BY created_at DESC LIMIT 50")
+	rows, err := DB.Query("SELECT id, tmdb_id, title, year, overview, poster_path, rating, trailer_key, reasoning, path_theme, created_at FROM suggestions ORDER BY created_at DESC LIMIT 50")
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +139,7 @@ func GetSuggestions() ([]DBSuggestion, error) {
 	var suggestions []DBSuggestion
 	for rows.Next() {
 		var s DBSuggestion
-		err := rows.Scan(&s.ID, &s.TMDBID, &s.Title, &s.Year, &s.Overview, &s.PosterPath, &s.Rating, &s.TrailerKey, &s.CreatedAt)
+		err := rows.Scan(&s.ID, &s.TMDBID, &s.Title, &s.Year, &s.Overview, &s.PosterPath, &s.Rating, &s.TrailerKey, &s.Reasoning, &s.PathTheme, &s.CreatedAt)
 		if err != nil {
 			return nil, err
 		}

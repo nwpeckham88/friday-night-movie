@@ -168,6 +168,8 @@ async function loadConfig() {
             
             fields.forEach(f => {
                 const el = document.getElementById(f.id);
+                if (!el) return; // Skip if element doesn't exist
+
                 if (f.env) {
                     el.value = f.val;
                     el.placeholder = 'Loaded from environment';
@@ -203,9 +205,11 @@ async function fetchRadarrProfiles() {
         const res = await fetch('/api/radarr/profiles');
         if (res.ok) {
             const profiles = await res.json();
-            profileSelect.innerHTML = profiles.map(p => `
-                <option value="${p.id}">${p.name}</option>
-            `).join('');
+            if (profileSelect) {
+                profileSelect.innerHTML = profiles.map(p => `
+                    <option value="${p.id}">${p.name}</option>
+                `).join('');
+            }
             
             // Re-select current value from config if available
             const currentCfg = await (await fetch('/api/config')).json();
@@ -445,31 +449,6 @@ function renderSpectrum(spectrum) {
     }).join('');
 }
 
-    try {
-        const downloadRes = await fetch('/api/downloads');
-        if (downloadRes.ok) {
-            const queue = await downloadRes.json();
-            if (queue && queue.length > 0) {
-                downloadStatus.innerHTML = queue.map(q => {
-                    const percent = ((q.size - q.sizeleft) / q.size) * 100 || 0;
-                    return `
-                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-family: var(--font-mono); color: var(--text-secondary);">
-                            <span>REEL: ${q.title}</span>
-                            <span>${percent.toFixed(1)}%</span>
-                        </div>
-                        <div style="width: 100%; height: 10px; background: #333; border: 2px solid #555; overflow: hidden; margin-bottom: 1rem;">
-                            <div style="width: ${percent}%; height: 100%; background: #006400;"></div>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                downloadStatus.innerHTML = '<p style="font-family: var(--font-mono); color: var(--text-secondary); text-align: center;">NO ACTIVE REELS IN TRANSIT</p>';
-            }
-        }
-    } catch (e) {
-        console.error("Failed to fetch downloads:", e);
-    }
-}
 
 async function showDefaultMovie(container) {
     try {

@@ -139,52 +139,57 @@ func DiscoverNewMovie(cfg config.AppConfig, jClient *media.JellyfinClient, rClie
 
 		// 4. Discover via Expert LLM
 		state := config.GetState()
-		suggestion, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, func(msg string) {
+		updateStatus("Expert is thinking of multiple diverse options...", true)
+		suggestions, err := provider.DiscoverMovie(historyStrings, state.TasteProfile, state.RejectedMovies, failedSuggestions, func(msg string) {
 			updateStatus(msg, true)
 		})
 		if err != nil {
 			return nil, fmt.Errorf("expert discovery failed: %w", err)
 		}
 
-		// Remember this suggestion so we don't repeat it if validation fails
-		failedSuggestions = append(failedSuggestions, suggestion.Title)
-
-		updateStatus(fmt.Sprintf("Resolving '%s' (%d) on TMDB...", suggestion.Title, suggestion.Year), true)
-		movie, err := tClient.SearchMovie(suggestion.Title, suggestion.Year)
-		if err != nil {
-			if attempt < maxRetries {
-				fmt.Printf("TMDB resolution failed, retrying... error: %v\n", err)
+		for _, suggestion := range suggestions {
+			updateStatus(fmt.Sprintf("Resolving '%s' (%d) on TMDB...", suggestion.Title, suggestion.Year), true)
+			movie, err := tClient.SearchMovie(suggestion.Title, suggestion.Year)
+			if err != nil {
+				fmt.Printf("TMDB resolution failed for '%s', skipping... error: %v\n", suggestion.Title, err)
+				failedSuggestions = append(failedSuggestions, suggestion.Title)
 				continue
 			}
-			return nil, fmt.Errorf("failed to sync expert result with tmdb (%s): %w", suggestion.Title, err)
-		}
 
-		// 5. Check Language (Strict Mode)
-		if cfg.StrictLanguage && cfg.PreferredLanguage != "" {
-			if !strings.EqualFold(movie.OriginalLanguage, cfg.PreferredLanguage) {
-				if attempt < maxRetries {
-					fmt.Printf("Expert suggested '%s' in language '%s', but strict mode requires '%s'. Retrying...\n", movie.Title, movie.OriginalLanguage, cfg.PreferredLanguage)
+			// 5. Check Language (Strict Mode)
+			if cfg.StrictLanguage && cfg.PreferredLanguage != "" {
+				if !strings.EqualFold(movie.OriginalLanguage, cfg.PreferredLanguage) {
+					fmt.Printf("Expert suggested '%s' in language '%s', but strict mode requires '%s'. Skipping...\n", movie.Title, movie.OriginalLanguage, cfg.PreferredLanguage)
 					failedSuggestions = append(failedSuggestions, movie.Title)
 					continue
 				}
-				return nil, fmt.Errorf("expert failed to suggest a movie in %s after %d attempts", cfg.PreferredLanguage, maxRetries)
 			}
-		}
 
-		// 6. Check if it's already in our library
-		if existingIDs[movie.ID] || existingTitles[normalize(movie.Title)] {
-			if attempt < maxRetries {
-				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), retrying...\n", movie.Title, movie.ID)
+			// 6. Check if it's already in our library
+			if existingIDs[movie.ID] || existingTitles[normalize(movie.Title)] {
+				fmt.Printf("Expert suggested duplicate '%s' (ID: %d), skipping...\n", movie.Title, movie.ID)
 				existingIDs[movie.ID] = true
 				existingTitles[normalize(movie.Title)] = true
 				failedSuggestions = append(failedSuggestions, movie.Title)
 				continue
 			}
-			return nil, fmt.Errorf("expert suggested a movie we already have after %d attempts: %s", maxRetries, movie.Title)
+
+			// 7. Check Minimum Rating
+			if movie.VoteAverage < cfg.MinRating {
+				fmt.Printf("Expert suggested '%s' but rating %.1f is below minimum %.1f, skipping...\n", movie.Title, movie.VoteAverage, cfg.MinRating)
+				failedSuggestions = append(failedSuggestions, movie.Title)
+				continue
+			}
+
+			// Found a good one!
+			selectedMovie = movie
+			break
 		}
 
-		selectedMovie = movie
-		break
+		if selectedMovie != nil {
+			break
+		}
+		fmt.Printf("No valid movies found in this batch of experts, retrying (attempt %d/3)...\n", attempt+1)
 	}
 
 	return selectedMovie, nil

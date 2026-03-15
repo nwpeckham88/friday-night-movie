@@ -414,7 +414,7 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Simple test call with empty history/context
-	movie, err := provider.DiscoverMovie([]string{}, "", []string{}, nil, func(msg string) {})
+	suggestions, err := provider.DiscoverMovie([]string{}, "", []string{}, []string{}, func(msg string) {})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -426,7 +426,7 @@ func testLLM(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "success",
 		"message": fmt.Sprintf("Successfully connected to %s!", body.Provider),
-		"movie":   movie.Title,
+		"movie":   suggestions[0].Title,
 	})
 }
 

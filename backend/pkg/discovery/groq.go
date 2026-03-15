@@ -32,7 +32,7 @@ func NewGroqClient(apiKey, endpoint, model string) (*GroqClient, error) {
 	}, nil
 }
 
-func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*GeminiResponse, error) {
+func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) ([]ExpertSuggestion, error) {
 	// Expert Persona Prompt (Unified with Gemini's logic)
 	now := time.Now()
 	dateStr := now.Format("January 02, 2006")
@@ -56,7 +56,8 @@ func (g *GroqClient) DiscoverMovie(userHistory []string, tasteProfile string, re
 	}
 
 	prompt := fmt.Sprintf(`You are a World-class Movie Expert and Cinema Historian.
-Your goal is to recommend ONE perfect, high-quality movie for the user based on their taste.
+Your goal is to suggest 5 VARIED movies based on the user's history and taste profile.
+These should be diverse in style, era, or genre to give the user great options.
 
 Context:
 - Today's Date: %s
@@ -68,10 +69,10 @@ Context:
 Instructions:
 1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
 2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
-3. Suggest a movie that matches the "vibe" or "quality" of their history and profile but offers something fresh.
+3. Provide 5 distinct suggestions.
 4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
-6. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
+6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024"}]
 `, dateStr, tasteProfile, historyContext, rejectedContext, failedContext)
 
 	// Groq/OpenRouter Request (OpenAI Format)
@@ -136,24 +137,31 @@ Instructions:
 		textResponse := openAIResp.Choices[0].Message.Content
 
 		// Clean up and parse JSON (Reuse common logic)
-		startIdx := strings.Index(textResponse, "{")
-		endIdx := strings.LastIndex(textResponse, "}")
+		startIdx := strings.Index(textResponse, "[")
+		endIdx := strings.LastIndex(textResponse, "]")
 		if startIdx == -1 || endIdx == -1 {
-			return nil, fmt.Errorf("could not find JSON in response: %s", textResponse)
+			// Try object fallback
+			startIdx = strings.Index(textResponse, "{")
+			endIdx = strings.LastIndex(textResponse, "}")
+			if startIdx == -1 || endIdx == -1 {
+				return nil, fmt.Errorf("could not find JSON in response: %s", textResponse)
+			}
+			cleanResponse := textResponse[startIdx : endIdx+1]
+			var single ExpertSuggestion
+			if err := json.Unmarshal([]byte(cleanResponse), &single); err == nil {
+				return []ExpertSuggestion{single}, nil
+			}
+			return nil, fmt.Errorf("failed to parse expert JSON object response: %s", cleanResponse)
 		}
 		cleanResponse := textResponse[startIdx : endIdx+1]
 
-		var result map[string]interface{}
-		if err := json.Unmarshal([]byte(cleanResponse), &result); err != nil {
+		var suggestions []ExpertSuggestion
+		if err := json.Unmarshal([]byte(cleanResponse), &suggestions); err != nil {
 			return nil, err
 		}
 
-		log.Printf("Expert (via Groq) Suggested: %+v", result)
-		return &GeminiResponse{
-			Title:       result["title"].(string),
-			Year:        int(result["year"].(float64)),
-			SearchQuery: result["search_query"].(string),
-		}, nil
+		log.Printf("Expert (via Groq) Suggested: %d movies", len(suggestions))
+		return suggestions, nil
 	}
 
 	return nil, fmt.Errorf("groq failed after retries: %w", lastErr)

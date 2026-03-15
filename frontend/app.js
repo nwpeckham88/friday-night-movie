@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
             llmProvider: document.getElementById('llm-provider').value,
             preferredLanguage: document.getElementById('preferred-language').value,
             strictLanguage: document.getElementById('strict-language').checked,
-            radarrQualityProfileId: parseInt(document.getElementById('radarr-profile').value) || 1
+            radarrQualityProfileId: parseInt(document.getElementById('radarr-profile').value) || 1,
+            minRating: parseFloat(document.getElementById('min-rating').value) || 6.5
         };
 
         // In a real app, send to backend API
@@ -120,6 +121,7 @@ async function loadConfig() {
                 { id: 'preferred-language', val: cfg.preferredLanguage, env: false },
                 { id: 'strict-language', val: cfg.strictLanguage, env: false, type: 'checkbox' },
                 { id: 'radarr-profile', val: cfg.radarrQualityProfileId, env: false, type: 'select' },
+                { id: 'min-rating', val: cfg.minRating, env: false },
             ];
             
             fields.forEach(f => {

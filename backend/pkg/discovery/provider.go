@@ -6,9 +6,16 @@ import (
 	"strings"
 )
 
+// ExpertSuggestion represents a movie suggested by the LLM
+type ExpertSuggestion struct {
+	Title       string `json:"title"`
+	Year        int    `json:"year"`
+	SearchQuery string `json:"search_query"`
+}
+
 // MovieDiscoverer is the interface for different LLM providers
 type MovieDiscoverer interface {
-	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*GeminiResponse, error)
+	DiscoverMovie(history []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) ([]ExpertSuggestion, error)
 	GenerateText(prompt string) (string, error)
 }
 

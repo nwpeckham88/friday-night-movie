@@ -18,6 +18,7 @@ type AppConfig struct {
 	PreferredLanguage string `json:"preferredLanguage"`
 	StrictLanguage    bool   `json:"strictLanguage"`
 	RadarrQualityProfileID int `json:"radarrQualityProfileId"`
+	MinRating         float64 `json:"minRating"`
 }
 
 // AppState represents the active state of the app
@@ -110,6 +111,7 @@ func GetFrontendConfig() map[string]interface{} {
 		"preferredLanguage": cfg.PreferredLanguage,
 		"strictLanguage":    cfg.StrictLanguage,
 		"radarrQualityProfileId": cfg.RadarrQualityProfileID,
+		"minRating":         cfg.MinRating,
 		
 		"jellyfinUrlFromEnv": false,
 		"jellyfinKeyFromEnv": false,
@@ -163,6 +165,10 @@ func GetFrontendConfig() map[string]interface{} {
 
 	if cfg.RadarrQualityProfileID == 0 {
 		res["radarrQualityProfileId"] = 1 // Default to 1
+	}
+
+	if cfg.MinRating == 0 {
+		res["minRating"] = 6.5 // Default to 6.5
 	}
 
 	return res

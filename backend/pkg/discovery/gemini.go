@@ -28,14 +28,8 @@ func NewGeminiClient(apiKey string) (*GeminiClient, error) {
 	}, nil
 }
 
-type GeminiResponse struct {
-	Title       string `json:"title"`
-	Year        int    `json:"year"`
-	SearchQuery string `json:"search_query"`
-}
-
 // DiscoverMovie uses Gemini to think about the user's history and search for a great recommendation
-func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) (*GeminiResponse, error) {
+func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, rejectedMovies []string, failedSuggestions []string, notify func(string)) ([]ExpertSuggestion, error) {
 	ctx := context.Background()
 
 	models := []string{"gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-2.0-flash"}
@@ -64,7 +58,8 @@ func (g *GeminiClient) DiscoverMovie(userHistory []string, tasteProfile string, 
 	}
 
 	prompt := fmt.Sprintf(`You are a World-class Movie Expert and Cinema Historian.
-Your goal is to recommend ONE perfect, high-quality movie for the user based on their taste.
+Your goal is to suggest 5 VARIED movies based on the user's history and taste profile.
+These should be diverse in style, era, or genre to give the user great options.
 
 Context:
 - Today's Date: %s
@@ -76,10 +71,10 @@ Context:
 Instructions:
 1. Act as an expert curator. Draw from your deep knowledge of film history, directorial styles, and cinematic movements.
 2. Consider "deep cuts" and acclaimed cinema, not just blockbusters.
-3. Suggest a movie that matches the "vibe" or "quality" of their history and profile but offers something fresh.
+3. Provide 5 distinct suggestions.
 4. DO NOT recommend items from the provided history list, rejected list, or failed suggestion list.
 5. STRICTLY NO TV SHOWS/SERIES. ONLY FEATURE-LENGTH MOVIES.
-6. Return ONLY JSON: {"title": "Movie", "year": 2024, "search_query": "Movie 2024"}
+6. Return ONLY a JSON list of objects: [{"title": "Movie", "year": 2024, "search_query": "Movie 2024"}]
 `, dateStr, tasteProfile, historyContext, rejectedContext, failedContext)
 
 	// Configure Generation Config with Search Grounding
@@ -138,26 +133,34 @@ Instructions:
 			}
 
 			// Clean up the response just in case the LLM returned extra text
-			startIdx := strings.Index(textResponse, "{")
-			endIdx := strings.LastIndex(textResponse, "}")
+			startIdx := strings.Index(textResponse, "[")
+			endIdx := strings.LastIndex(textResponse, "]")
 			if startIdx == -1 || endIdx == -1 {
-				lastErr = fmt.Errorf("could not find JSON object in gemini response: %s", textResponse)
+				// Try object fallback
+				startIdx = strings.Index(textResponse, "{")
+				endIdx = strings.LastIndex(textResponse, "}")
+				if startIdx == -1 || endIdx == -1 {
+					lastErr = fmt.Errorf("could not find JSON in gemini response: %s", textResponse)
+					break
+				}
+				cleanResponse := textResponse[startIdx : endIdx+1]
+				var single ExpertSuggestion
+				if err := json.Unmarshal([]byte(cleanResponse), &single); err == nil {
+					return []ExpertSuggestion{single}, nil
+				}
+				lastErr = fmt.Errorf("failed to parse gemini json object response: %s", cleanResponse)
 				break
 			}
 			cleanResponse := textResponse[startIdx : endIdx+1]
 
-			var result map[string]interface{}
-			if err := json.Unmarshal([]byte(cleanResponse), &result); err != nil {
-				lastErr = fmt.Errorf("failed to parse gemini json response: %w - response was: %s", err, cleanResponse)
+			var suggestions []ExpertSuggestion
+			if err := json.Unmarshal([]byte(cleanResponse), &suggestions); err != nil {
+				lastErr = fmt.Errorf("failed to parse gemini json list response: %w - response was: %s", err, cleanResponse)
 				break
 			}
 
-			log.Printf("Gemini Suggested (via %s): %+v", model, result)
-			return &GeminiResponse{
-				Title:       result["title"].(string),
-				Year:        int(result["year"].(float64)),
-				SearchQuery: result["search_query"].(string),
-			}, nil
+			log.Printf("Gemini Suggested (via %s): %d movies", model, len(suggestions))
+			return suggestions, nil
 		}
 	}
 

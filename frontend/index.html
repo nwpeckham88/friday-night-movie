@@ -3,172 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Friday Night Movie</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Friday Night Movie | Cinematic Ledger</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=Courier+Prime&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="app-container">
         <header class="glass-header">
-            <h1>Friday Night Movie</h1>
-            <nav>
-                <button id="nav-dashboard" class="active">Dashboard</button>
-                <button id="nav-settings">Settings</button>
+            <div class="brand">
+                <h1>Friday Night Movie</h1>
+                <p style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-color); letter-spacing: 2px; margin-top: -5px;">EST. 2024 • BROADCASTING SERVICE</p>
+            </div>
+            <nav class="radio-dial">
+                <button id="nav-dashboard" class="active">DASHBOARD</button>
+                <button id="nav-settings">SETTINGS</button>
             </nav>
         </header>
 
         <main id="view-dashboard" class="view active-view">
-            <section class="hero-card glass-panel fade-in">
-                <h2>Tonight's Selection</h2>
-                <div class="movie-showcase" id="current-movie">
-                    <!-- Dynamic Content -->
-                    <div style="text-align: center; padding: 2rem;">
-                        <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Loading schedule...</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
-                        <div class="button-group" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                            <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                                <span>🎲</span> I'm feeling lucky
-                            </button>
-                            <button id="search-btn" class="btn-secondary" onclick="triggerSearch()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-                                <span>🔍</span> Search for Suggestion
-                            </button>
+            <!-- Vintage TV Cabinet -->
+            <section class="hero-card fade-in">
+                <div class="tv-bezel">
+                    <div class="movie-showcase" id="current-movie">
+                        <!-- Dynamic Content (Silent Movie Vibe) -->
+                        <div style="text-align: center; padding: 4rem;">
+                            <h3 id="next-run-time" style="color: var(--paper-color); font-family: var(--font-heading); font-size: 2.5rem; margin-bottom: 1rem;">TUNING...</h3>
+                            <p style="color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 2rem;">STANDBY FOR BROADCAST</p>
+                            <div class="button-group" style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+                                <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="padding: 1rem 2rem;">
+                                    <span>🎲</span> SPIN THE DIAL
+                                </button>
+                                <button id="search-btn" class="btn-secondary" onclick="triggerSearch()" style="padding: 1rem 2rem; background: #666; border: 2px solid #444; color: white;">
+                                    <span>🔍</span> SEARCH AIRWAVES
+                                </button>
+                            </div>
+                            <div id="engine-status" style="margin-top: 2rem; color: var(--accent-color); font-family: var(--font-mono); font-weight: bold;"></div>
                         </div>
-                        <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;"></div>
                     </div>
+                </div>
+                <div class="tv-controls">
+                    <div class="knob"></div>
+                    <div class="knob"></div>
                 </div>
             </section>
 
             <div class="dashboard-grid">
+                <!-- Ledger Page 1: History -->
                 <section class="glass-panel slide-up" style="animation-delay: 0.1s;">
-                    <h3><i class="fas fa-download"></i> Download Status</h3>
-                    <div id="download-status">
-                        <div class="status-item">No active downloads</div>
-                    </div>
-                </section>
-
-                <section class="glass-panel slide-up" style="animation-delay: 0.15s;">
-                    <h3><i class="fas fa-brain"></i> Cinematic Taste Profile</h3>
-                    <div id="taste-profile-content" class="taste-profile-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
-                        Establishing your taste...
-                    </div>
-                </section>
-
-                <section class="glass-panel slide-up" style="animation-delay: 0.2s;">
-                    <h3>Recent History (Jellyfin)</h3>
+                    <h3><i class="fas fa-book-open"></i> ARCHIVE LOG</h3>
                     <ul id="history-list" class="history-list">
-                        <li>Loading history...</li>
+                        <li>Loading log entries...</li>
                     </ul>
                 </section>
 
-                <section class="glass-panel slide-up" style="animation-delay: 0.25s;">
-                    <h3>Discovery History</h3>
+                <!-- Ledger Page 2: Taste Profile -->
+                <section class="glass-panel slide-up" style="animation-delay: 0.15s;">
+                    <h3><i class="fas fa-quill-pen"></i> TASTE PROFILE</h3>
+                    <div id="taste-profile-content" class="taste-profile-text">
+                        Transcribing your cinematic preferences...
+                    </div>
+                </section>
+
+                <!-- Ledger Page 3: Discovery -->
+                <section class="glass-panel slide-up" style="animation-delay: 0.2s;">
+                    <h3><i class="fas fa-broadcast-tower"></i> AIRWAVE LOG</h3>
                     <ul id="suggestions-list" class="history-list">
-                        <li>No expert suggestions yet.</li>
+                        <li>Awaiting signal...</li>
                     </ul>
                 </section>
+            </div>
+
+            <!-- Download Status - Small Ticket Style -->
+            <div id="download-status" style="margin-top: 3rem; text-align: center; border-top: 1px dashed var(--sepia-med); padding-top: 2rem;">
+                <p style="font-family: var(--font-mono); color: var(--text-secondary);">NO ACTIVE REELS IN TRANSIT</p>
             </div>
         </main>
 
         <main id="view-settings" class="view">
-            <section class="glass-panel fade-in">
-                <h2>Configuration</h2>
-                <div class="config-warning" style="margin-bottom: 2rem; color: var(--text-secondary); font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--accent-color);">
-                    <strong>Security Note:</strong> Values entered here are stored unencrypted in <code>data/data.json</code>. For better security, you can set these values as environment variables (e.g., via a <code>.env</code> file). Fields loaded from the environment are greyed out and cannot be modified here.
-                </div>
+            <section class="glass-panel fade-in" style="transform: rotate(0deg); max-width: 900px; margin: 0 auto;">
+                <h2 style="font-family: var(--font-heading); font-size: 2.5rem;">STATION CONFIGURATION</h2>
+                <p style="font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 2rem; color: #666;">MANUAL OPERATING INSTRUCTIONS • TOP SECRET</p>
+                
                 <form id="settings-form">
-                    <div class="form-group">
-                        <label for="jellyfin-url">Jellyfin URL</label>
-                        <input type="text" id="jellyfin-url" placeholder="http://localhost:8096">
-                    </div>
-                    <div class="form-group">
-                        <label for="jellyfin-key">Jellyfin API Key</label>
-                        <input type="password" id="jellyfin-key">
-                    </div>
-                    <div class="form-group">
-                        <label for="radarr-url">Radarr URL</label>
-                        <input type="text" id="radarr-url" placeholder="http://localhost:7878">
-                    </div>
-                    <div class="form-group">
-                        <label for="radarr-key">Radarr API Key</label>
-                        <input type="password" id="radarr-key">
-                    </div>
-                    <div class="form-group">
-                        <label for="radarr-profile">Radarr Quality Profile</label>
-                        <select id="radarr-profile">
-                            <option value="1">Loading profiles...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="tmdb-key">TMDB API Key</label>
-                        <input type="password" id="tmdb-key">
-                    </div>
-                    <div class="form-group">
-                        <label for="min-rating">Minimum TMDB Rating (0-10)</label>
-                        <input type="number" id="min-rating" step="0.1" min="0" max="10" placeholder="6.5">
-                    </div>
-                    <div class="form-group">
-                        <label for="gemini-key">Gemini/LLM API Key</label>
-                        <input type="password" id="gemini-key">
-                    </div>
-                    <div class="form-group">
-                        <label for="llm-provider">Expert Discovery Brain</label>
-                        <select id="llm-provider">
-                            <option value="gemini">Google Gemini (Built-in Search)</option>
-                            <option value="groq">Groq (Llama 3.3 - Fast)</option>
-                            <option value="openrouter">OpenRouter (Universal)</option>
-                        </select>
-                    </div>
-                    <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="discovery-mood">Discovery Mood</label>
-                            <select id="discovery-mood" style="width: 100%;">
-                                <option value="Balanced">Balanced</option>
-                                <option value="Popcorn">Popcorn (Fun/Entertaining)</option>
-                                <option value="High Art">High Art (Critical Acclaim)</option>
-                                <option value="Deep Cut">Deep Cut (Obscure Gems)</option>
-                            </select>
+                    <div class="config-section" style="border-bottom: 2px solid #d2b48c; margin-bottom: 2rem; padding-bottom: 1rem;">
+                        <h4 style="font-family: var(--font-heading); color: #8b0000; margin-bottom: 1rem;">NETWORK TERMINALS</h4>
+                        <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="jellyfin-url">JELLYFIN COORDINATES</label>
+                                <input type="text" id="jellyfin-url" placeholder="http://station.local:8096">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="jellyfin-key">ACCESS TOKEN</label>
+                                <input type="password" id="jellyfin-key">
+                            </div>
                         </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="discovery-persona">Discovery Persona</label>
-                            <select id="discovery-persona" style="width: 100%;">
-                                <option value="The Movie Expert">The Movie Expert</option>
-                                <option value="The Fanboy">The Fanboy</option>
-                                <option value="The Critic">The Critic</option>
-                            </select>
+                        <div class="form-row" style="display: flex; gap: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="radarr-url">RADARR COORDINATES</label>
+                                <input type="text" id="radarr-url" placeholder="http://station.local:7878">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="radarr-key">ACCESS TOKEN</label>
+                                <input type="password" id="radarr-key">
+                            </div>
                         </div>
                     </div>
-                    <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="preferred-language">Preferred Language (ISO)</label>
-                            <input type="text" id="preferred-language" placeholder="en, fr, ja..." style="width: 100%;">
+
+                    <div class="config-section" style="border-bottom: 2px solid #d2b48c; margin-bottom: 2rem; padding-bottom: 1rem;">
+                        <h4 style="font-family: var(--font-heading); color: #8b0000; margin-bottom: 1rem;">DISCOVERY DIALS</h4>
+                        <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="llm-provider">EXPERT BRAIN</label>
+                                <select id="llm-provider">
+                                    <option value="gemini">Google Gemini (Grounding)</option>
+                                    <option value="groq">Groq (Llama 3.3)</option>
+                                    <option value="openrouter">OpenRouter (Universal)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="gemini-key">BRAIN ACCESS TOKEN</label>
+                                <input type="password" id="gemini-key">
+                            </div>
                         </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0; display: flex; align-items: flex-end; padding-bottom: 0.5rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 0;">
-                                <input type="checkbox" id="strict-language">
-                                <span>Strict Mode</span>
-                            </label>
+                        <div class="form-row" style="display: flex; gap: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="discovery-mood">SIGNAL MOOD</label>
+                                <select id="discovery-mood">
+                                    <option value="Balanced">Balanced</option>
+                                    <option value="Popcorn">Popcorn (Fun)</option>
+                                    <option value="High Art">High Art (Critical)</option>
+                                    <option value="Deep Cut">Deep Cut (Obscure)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="discovery-persona">EXPERT PERSONA</label>
+                                <select id="discovery-persona">
+                                    <option value="The Movie Expert">The Movie Expert</option>
+                                    <option value="The Fanboy">The Fanboy</option>
+                                    <option value="The Critic">The Critic</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="discord-webhook">Discord Webhook URL (Notifications)</label>
-                        <input type="password" id="discord-webhook" placeholder="https://discord.com/api/webhooks/...">
-                    </div>
-                    <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="excluded-eras">Excluded Eras/Decades</label>
-                            <input type="text" id="excluded-eras" placeholder="e.g. 1980s, 1990s" style="width: 100%;">
+
+                    <div class="config-section" style="margin-bottom: 2rem;">
+                        <h4 style="font-family: var(--font-heading); color: #8b0000; margin-bottom: 1rem;">FILTERS & FEEDBACK</h4>
+                        <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="discord-webhook">NOTIFICATIONS (DISCORD)</label>
+                                <input type="password" id="discord-webhook" placeholder="Webhook URL">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="min-rating">MINIMUM RATING</label>
+                                <input type="number" id="min-rating" step="0.1" min="0" max="10">
+                            </div>
                         </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="excluded-genres">Excluded Genres</label>
-                            <input type="text" id="excluded-genres" placeholder="e.g. Horror, Documentary" style="width: 100%;">
+                        <div class="form-row" style="display: flex; gap: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="excluded-eras">EXCLUDE ERAS</label>
+                                <input type="text" id="excluded-eras" placeholder="e.g. 1980s">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="excluded-genres">EXCLUDE GENRES</label>
+                                <input type="text" id="excluded-genres" placeholder="e.g. Horror">
+                            </div>
                         </div>
                     </div>
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                        <button type="button" id="test-llm-btn" class="btn-secondary" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border);">Test LLM Connection</button>
+
+                    <div style="text-align: right; margin-top: 2rem;">
+                        <button type="button" id="test-llm-btn" class="btn-secondary" style="margin-right: 1rem; width: auto; padding: 0.8rem 2rem;">TEST SIGNAL</button>
+                        <button type="submit" class="btn-primary" style="width: auto; padding: 0.8rem 3rem;">SAVE LOG</button>
                     </div>
-                    <div id="test-result" style="margin-bottom: 1.5rem; display: none; padding: 1rem; border-radius: 8px; font-size: 0.9rem;"></div>
-                    <button type="submit" class="btn-primary">Save Settings</button>
                 </form>
             </section>
         </main>

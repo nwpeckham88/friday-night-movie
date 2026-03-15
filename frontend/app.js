@@ -245,59 +245,59 @@ async function mockLoadData() {
             if (state && state.lastMovieTitle) {
                 const posterUrl = state.lastMoviePosterPath ? `https://image.tmdb.org/t/p/w500${state.lastMoviePosterPath}` : 'https://via.placeholder.com/200x300?text=No+Poster';
                 
-                let actionButton = `<button id="trigger-btn" class="btn-primary" style="margin-top: 1rem; width: auto;" onclick="triggerJob()">Roll Again</button>`;
+                let actionButtons = `
+                    <div class="button-group" style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button class="btn-primary" style="width: auto;" onclick="triggerJob()">SPIN AGAIN</button>
+                    </div>
+                `;
+                
                 if (state.isSuggested) {
-                    actionButton = `
+                    actionButtons = `
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start; flex-wrap: wrap; position: relative;">
-                            <button class="btn-primary" style="background: var(--success-color); box-shadow: 0 0 15px var(--success-color); width: auto;" onclick="addMovie(${state.lastMovieId})">Add to Queue</button>
-                            <button class="btn-secondary" style="width: auto; background: rgba(0, 150, 255, 0.2); border: 1px solid var(--accent-color); color: white;" onclick="endorseMovie(${state.lastMovieId})" title="Like this but don't download"><span>⭐</span> Endorse</button>
-                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.1); border: 1px solid var(--panel-border);" onclick="rejectMovie(${state.lastMovieId})">Not Interested</button>
-                            <button class="btn-secondary" style="width: auto; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);" onclick="triggerSearch()">Search Again</button>
-                            <button class="btn-icon" style="position: absolute; top: -110px; right: -10px; background: rgba(0,0,0,0.5); border: 1px solid var(--panel-border); color: var(--text-secondary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem;" onclick="clearSuggestion()" title="Clear Suggestion">✕</button>
+                            <button class="btn-primary" style="background: #006400; box-shadow: 0 4px 0 #004d00; width: auto;" onclick="addMovie(${state.lastMovieId})">ADD TO REEL</button>
+                            <button class="btn-secondary" style="width: auto; background: #c5a059; border-color: #a88a4d; color: #2c1e14;" onclick="endorseMovie(${state.lastMovieId})">ENDORSE</button>
+                            <button class="btn-secondary" style="width: auto;" onclick="rejectMovie(${state.lastMovieId})">DISMISS</button>
+                            <button class="btn-secondary" style="width: auto;" onclick="triggerSearch()">SEARCH AIRWAVES</button>
+                            <button class="btn-icon" style="position: absolute; top: -10px; right: 0; background: rgba(0,0,0,0.5); border: 1px solid #333; color: #666; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;" onclick="clearSuggestion()">✕</button>
                         </div>
                     `;
                 }
 
                 currentMovieArea.innerHTML = `
-                    <div class="movie-card-active fade-in" style="display: flex; gap: 2rem; align-items: flex-start; text-align: left; position: relative;">
-                        <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}" style="width: 200px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                        <div class="movie-info" style="flex: 1;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <h3 style="color: var(--text-primary); font-size: 1.8rem; margin: 0;">${state.lastMovieTitle}</h3>
-                                ${state.isSuggested ? '<span style="background: var(--accent-color); color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">SUGGESTION</span>' : ''}
+                    <div class="movie-card-active fade-in">
+                        <img class="movie-poster" src="${posterUrl}" alt="${state.lastMovieTitle}">
+                        <div class="movie-info" style="flex: 1; text-align: left;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <h3 style="margin: 0;">${state.lastMovieTitle}</h3>
+                                ${state.isSuggested ? '<span style="font-family: var(--font-mono); background: var(--accent-color); color: black; padding: 2px 8px; font-size: 0.7rem; font-weight: bold; border-radius: 2px;">BROADCAST SIGNAL</span>' : ''}
                             </div>
-                            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">${state.lastMovieOverview}</p>
-                            <div class="movie-meta" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-                                <span style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color);">⭐ ${Number(state.lastMovieRating).toFixed(1)}/10</span>
-                                <a href="https://www.themoviedb.org/movie/${state.lastMovieId}" target="_blank" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;" class="tmdb-link">
-                                    <span>🎬</span> View on TMDB
-                                </a>
+                            <div class="movie-meta" style="font-family: var(--font-mono); margin: 0.5rem 0; color: var(--accent-color);">
+                                <span>RATING: ${Number(state.lastMovieRating).toFixed(1)}/10</span> • 
+                                <a href="https://www.themoviedb.org/movie/${state.lastMovieId}" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">TMDB_REF</a>
                             </div>
+                            <p style="margin-bottom: 1.5rem; font-size: 1rem; color: #aaa;">${state.lastMovieOverview}</p>
+                            
                             ${state.lastMovieTrailerKey ? `
-                                <div style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                                    <h4 style="margin-bottom: 0.5rem; color: #eee; font-size: 0.9rem;">Trailer</h4>
-                                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; background: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.4);">
-                                        <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
-                                            src="https://www.youtube.com/embed/${state.lastMovieTrailerKey}" 
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                <div style="margin-bottom: 1.5rem; border: 4px solid #1a1a1a; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 15px rgba(0,0,0,1);">
+                                    <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+                                        <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; filter: sepia(0.2) contrast(1.1);" 
+                                            src="https://www.youtube.com/embed/${state.lastMovieTrailerKey}?autoplay=0&controls=1&showinfo=0&modestbranding=1" 
                                             allowfullscreen>
                                         </iframe>
                                     </div>
                                 </div>
                             ` : ''}
-                            ${actionButton}
-                            <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600;">${state.status || ""}</div>
+                            
+                            ${actionButtons}
                         </div>
                     </div>
                 `;
             } else if (state.isRunning) {
-                // If it's running but we don't have a movie title yet, show the selecting screen
                 currentMovieArea.innerHTML = `
-                    <div style="text-align: center; padding: 2rem;" class="fade-in">
-                        <div class="loading-pulse" style="margin-bottom: 2rem;">Selecting a movie...</div>
-                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Gemini is currently browsing for your perfect movie selection.</p>
-                        <button id="trigger-btn" class="btn-primary" disabled style="opacity: 0.5; margin: 0 auto;">Searching...</button>
-                        <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;">${state.status || ""}</div>
+                    <div style="text-align: center; padding: 4rem;" class="fade-in">
+                        <h3 style="color: var(--paper-color); font-family: var(--font-heading); font-size: 2.5rem; margin-bottom: 1rem;" class="loading-pulse">TUNING SIGNAL...</h3>
+                        <p style="color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 2rem;">BROADCAST IN PROGRESS</p>
+                        <div id="engine-status" style="margin-top: 2rem; color: var(--accent-color); font-family: var(--font-mono); font-weight: bold;">${state.status || ""}</div>
                     </div>
                 `;
             } else {
@@ -361,17 +361,17 @@ async function mockLoadData() {
                 downloadStatus.innerHTML = queue.map(q => {
                     const percent = ((q.size - q.sizeleft) / q.size) * 100 || 0;
                     return `
-                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <span>${q.title}</span>
-                            <span style="color: var(--accent-color);">${q.status}... ${percent.toFixed(1)}%</span>
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-family: var(--font-mono); color: var(--text-secondary);">
+                            <span>REEL: ${q.title}</span>
+                            <span>${percent.toFixed(1)}%</span>
                         </div>
-                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 1rem;">
-                            <div style="width: ${percent}%; height: 100%; background: var(--success-color); box-shadow: 0 0 10px var(--success-color);"></div>
+                        <div style="width: 100%; height: 10px; background: #333; border: 2px solid #555; overflow: hidden; margin-bottom: 1rem;">
+                            <div style="width: ${percent}%; height: 100%; background: #006400;"></div>
                         </div>
                     `;
                 }).join('');
             } else {
-                downloadStatus.innerHTML = '<div class="status-item">No active downloads</div>';
+                downloadStatus.innerHTML = '<p style="font-family: var(--font-mono); color: var(--text-secondary); text-align: center;">NO ACTIVE REELS IN TRANSIT</p>';
             }
         }
     } catch (e) {
@@ -385,18 +385,18 @@ async function showDefaultMovie(container) {
         const data = res.ok ? await res.json() : { nextRun: 'Friday at 6:00 PM' };
         
         container.innerHTML = `
-            <div style="text-align: center; padding: 2rem;" class="fade-in">
-                <h3 id="next-run-time" style="color: var(--text-primary); margin-bottom: 1rem;">Next Selection: ${data.nextRun}</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">The Friday Night Movie engine hasn't selected a movie yet.</p>
-                <div class="button-group" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <span>🎲</span> I'm feeling lucky
+            <div style="text-align: center; padding: 4rem;" class="fade-in">
+                <h3 id="next-run-time" style="color: var(--paper-color); font-family: var(--font-heading); font-size: 2.5rem; margin-bottom: 1rem;">TUNED TO: ${data.nextRun}</h3>
+                <p style="color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 2rem;">WAITING FOR NEXT BROADCAST</p>
+                <div class="button-group" style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+                    <button id="trigger-btn" class="btn-primary" onclick="triggerJob()" style="padding: 1rem 2rem;">
+                        <span>🎲</span> SPIN THE DIAL
                     </button>
-                    <button id="search-btn" class="btn-secondary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="triggerSearch()">
-                        <span>🔍</span> Search for Suggestion
+                    <button id="search-btn" class="btn-secondary" style="padding: 1rem 2rem; background: #666; border: 2px solid #444; color: white;" onclick="triggerSearch()">
+                        <span>🔍</span> SEARCH AIRWAVES
                     </button>
                 </div>
-                <div id="engine-status" style="margin-top: 1.5rem; color: var(--accent-color); font-weight: 600; min-height: 1.5rem;"></div>
+                <div id="engine-status" style="margin-top: 2rem; color: var(--accent-color); font-family: var(--font-mono); font-weight: bold;"></div>
             </div>
         `;
     } catch (e) {
